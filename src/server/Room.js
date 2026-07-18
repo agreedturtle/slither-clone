@@ -537,6 +537,8 @@ export class Room {
         points: body,
         effectiveMultiplier: s.effectiveMultiplier,
         magnetTicks: s.magnetTicks,
+        speedTicks: s.speedTicks,
+        zoomTicks: s.zoomTicks,
         boosters: Array.from(s.boosters),
       });
     }

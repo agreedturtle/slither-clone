@@ -11,7 +11,7 @@ export default {
 
   // --- World ---------------------------------------------------------------
   WORLD_RADIUS: 8000,           // circular arena radius; leaving it = death
-  FOOD_TARGET: 12000,            // how many food pellets exist at any time
+  FOOD_TARGET: 10000,            // how many food pellets exist at any time
 
   // --- Population ----------------------------------------------------------
   BOT_TARGET: 40,               // bots fill the world up to this count
