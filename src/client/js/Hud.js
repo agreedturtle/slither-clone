@@ -20,7 +20,7 @@ export class Hud {
   }
 
   _sizeMinimap() {
-    const s = 150;
+    const s = 200;
     this.minimap.width = s * this._mmDpr;
     this.minimap.height = s * this._mmDpr;
     this.mctx.setTransform(this._mmDpr, 0, 0, this._mmDpr, 0, 0);
@@ -48,7 +48,7 @@ export class Hud {
   // radar: [{id, x, y, score, angle, isMe}]
   drawMinimap(radar, myId) {
     const ctx = this.mctx;
-    const S = 150;
+    const S = 200;
     ctx.clearRect(0, 0, S, S);
     const cx = S / 2, cy = S / 2, rad = S / 2 - 3;
 
@@ -66,13 +66,13 @@ export class Hud {
       const hy = cy + s.y * scale;
       const big = s.isMe || s.id === myId;
 
-      // Length proportional to actual body point count (log curve for very slow growth)
       const pts = scoreToPoints(s.score);
-      const bodyLen = Math.max(3, Math.min(22, Math.log2(pts / 12 + 1) * 2.2 + 3));
-
-      // Thickness proportional to actual body radius (log curve for very slow growth)
       const bRadius = bodyRadiusFromScore(s.score);
-      const lineW = Math.max(1.2, Math.min(4.5, Math.log2(bRadius / 6 + 1) * 1.1 + 1.2));
+
+      // Length: map body points to minimap pixels (min 4px, max ~50px)
+      const bodyLen = Math.max(4, Math.min(50, pts * 0.025));
+      // Thickness: map body radius to minimap line width (min 1px, max 6px)
+      const lineW = Math.max(1, Math.min(6, bRadius * 0.06));
 
       const tx = hx - Math.cos(s.angle) * bodyLen;
       const ty = hy - Math.sin(s.angle) * bodyLen;
@@ -83,8 +83,10 @@ export class Hud {
       if (big) {
         ctx.strokeStyle = 'rgba(110,232,74,0.9)';
       } else {
-        const bright = Math.min(180, 70 + s.score / 5);
-        ctx.strokeStyle = `rgba(${bright},${bright},${bright + 20},0.75)`;
+        // Greyscale: brighter = bigger score, with slight cool tint
+        const t = Math.min(1, s.score / 8000);
+        const base = Math.round(60 + t * 140);
+        ctx.strokeStyle = `rgba(${base - 5},${base},${base + 15},0.8)`;
       }
 
       ctx.beginPath();
@@ -92,10 +94,11 @@ export class Hud {
       ctx.lineTo(hx, hy);
       ctx.stroke();
 
-      // head dot
+      // head dot — sized by body radius
+      const headR = Math.max(1.5, lineW * 1.0);
       ctx.fillStyle = ctx.strokeStyle;
       ctx.beginPath();
-      ctx.arc(hx, hy, lineW * 0.9, 0, Math.PI * 2);
+      ctx.arc(hx, hy, headR, 0, Math.PI * 2);
       ctx.fill();
     }
   }
