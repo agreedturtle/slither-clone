@@ -341,11 +341,8 @@ export class Renderer {
         ctx.stroke();
       }
     } else if (isSplit) {
-      // Lengthwise split: left half blue, right half yellow, wavy border.
       const cols = skin.split || ['#2255CC', '#E8D44D'];
       const half = lineWidth * 0.5;
-      const waveAmp = lineWidth * 0.18;
-      const waveFreq = 0.12;
       const perps = new Float32Array(count * 2);
       for (let i = 0; i < count; i++) {
         let dx, dy;
@@ -369,10 +366,9 @@ export class Renderer {
         ctx.moveTo(screen[0], screen[1]);
         for (let i = 1; i < count; i++) ctx.lineTo(screen[i * 2], screen[i * 2 + 1]);
         for (let i = count - 1; i >= 0; i--) {
-          const wave = Math.sin(i * waveFreq + performance.now() * 0.002) * waveAmp;
           ctx.lineTo(
-            screen[i * 2] + perps[i * 2] * (half + wave) * dir,
-            screen[i * 2 + 1] + perps[i * 2 + 1] * (half + wave) * dir
+            screen[i * 2] + perps[i * 2] * half * dir,
+            screen[i * 2 + 1] + perps[i * 2 + 1] * half * dir
           );
         }
         ctx.closePath();
