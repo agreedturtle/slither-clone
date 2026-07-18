@@ -122,7 +122,7 @@ export class Hud {
       this._boostPanel.style.cssText = 'position:fixed;display:flex;flex-direction:column;gap:6px;' +
         'pointer-events:none;z-index:20;transition:opacity 0.3s ease;opacity:0;' +
         'font-family:Inter,-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif;' +
-        'top:56px;left:16px;';
+        'top:56px;left:170px;';
       document.body.appendChild(this._boostPanel);
     }
     const BOOST_COLORS = { 2: '#6ee84a', 5: '#f87171', 10: '#fbbf24' };
