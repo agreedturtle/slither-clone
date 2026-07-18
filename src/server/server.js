@@ -134,51 +134,54 @@ wss.on('connection', (ws) => {
         case C2S.CHAT:       room.handleChat(player, msg); break;
         case C2S.LEADERBOARD_ALLTIME: room.handleLeaderboardAlltime(player); break;
         case C2S.LOGIN: {
-          const result = db.login(msg.username, msg.password);
-          try {
-            const resp = encodeAuthResult(result.ok, result.msg || '', result.token || '', result.username || '');
-            ws.send(resp);
-          } catch (_) {}
-          if (result.ok) {
-            player.username = result.username;
-            player.stats = db.getStats(result.username);
-          }
+          db.login(msg.username, msg.password).then(result => {
+            try {
+              const resp = encodeAuthResult(result.ok, result.msg || '', result.token || '', result.username || '');
+              ws.send(resp);
+            } catch (_) {}
+            if (result.ok) {
+              player.username = result.username;
+              db.getStats(result.username).then(s => { player.stats = s; });
+            }
+          });
           break;
         }
         case C2S.REGISTER: {
-          const result = db.register(msg.username, msg.password);
-          try {
-            const resp = encodeAuthResult(result.ok, result.msg || '', result.token || '', result.username || '');
-            ws.send(resp);
-          } catch (_) {}
-          if (result.ok) {
-            player.username = result.username;
-            player.stats = db.getStats(result.username);
-          }
+          db.register(msg.username, msg.password).then(result => {
+            try {
+              const resp = encodeAuthResult(result.ok, result.msg || '', result.token || '', result.username || '');
+              ws.send(resp);
+            } catch (_) {}
+            if (result.ok) {
+              player.username = result.username;
+              db.getStats(result.username).then(s => { player.stats = s; });
+            }
+          });
           break;
         }
         case C2S.AUTH_TOKEN: {
-          const username = db.validateToken(msg.token);
-          if (username) {
-            player.username = username;
-            player.stats = db.getStats(username);
-            try {
-              const resp = encodeAuthResult(true, '', msg.token, username);
-              ws.send(resp);
-            } catch (_) {}
-          } else {
-            try {
-              const resp = encodeAuthResult(false, 'Invalid or expired token', '', '');
-              ws.send(resp);
-            } catch (_) {}
-          }
+          db.validateToken(msg.token).then(username => {
+            if (username) {
+              player.username = username;
+              db.getStats(username).then(s => { player.stats = s; });
+              try {
+                const resp = encodeAuthResult(true, '', msg.token, username);
+                ws.send(resp);
+              } catch (_) {}
+            } else {
+              try {
+                const resp = encodeAuthResult(false, 'Invalid or expired token', '', '');
+                ws.send(resp);
+              } catch (_) {}
+            }
+          });
           break;
         }
         case C2S.PROFILE: {
-          if (player.username && player.stats) {
-            try {
-              ws.send(encodeProfileData({ username: player.username, ...player.stats }));
-            } catch (_) {}
+          if (player.username) {
+            db.getStats(player.username).then(stats => {
+              try { ws.send(encodeProfileData({ username: player.username, ...stats })); } catch (_) {}
+            });
           }
           break;
         }
@@ -200,10 +203,14 @@ wss.on('connection', (ws) => {
 });
 
 // --- Go ---------------------------------------------------------------------
-httpServer.listen(PORT, () => {
-  console.log(`\n  Slither clone running:\n    http://localhost:${PORT}\n`);
-  console.log(`  World: humans + ${botCount()} bots. Open multiple tabs to play together.\n`);
-});
+async function start() {
+  await db.ready;
+  httpServer.listen(PORT, () => {
+    console.log(`\n  Slither clone running:\n    http://localhost:${PORT}\n`);
+    console.log(`  World: humans + ${botCount()} bots. Open multiple tabs to play together.\n`);
+  });
+}
+start();
 
 function botCount() {
   const c = Number(process.env.BOT_COUNT);

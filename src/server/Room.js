@@ -426,8 +426,8 @@ export class Room {
     }
 
     // Broadcast kill feed to all players
-    const killerName = killer ? (killer.playerRef ? killer.playerRef.username || killer.botRef?.name || 'bot' : 'bot') : 'world';
-    const victimName = snake.playerRef ? snake.playerRef.username || snake.name || 'bot' : snake.name || 'bot';
+    const killerName = killer ? (killer.playerRef?.username || killer.botRef?.name || killer.name || 'bot') : 'world';
+    const victimName = snake.playerRef?.username || snake.botRef?.name || snake.name || 'bot';
     const feedPacket = encodeKillFeed(killerName, victimName, killerIsHeadshot);
     for (const p of this._players.values()) {
       if (p.send) {
@@ -667,8 +667,9 @@ export class Room {
 
   handleLeaderboardAlltime(player) {
     if (!this.db) return;
-    const top = this.db.getLeaderboard();
-    try { player.send(encodeLeaderboardAlltime(top)); } catch (_) {}
+    this.db.getLeaderboard().then(top => {
+      try { player.send(encodeLeaderboardAlltime(top)); } catch (_) {}
+    });
   }
 
   handleAdmin(player, msg) {
