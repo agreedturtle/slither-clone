@@ -13,7 +13,7 @@ import { C2S, S2C, Writer, Reader,
   decodeWelcome, decodeSnapshot, decodeFoodAdd, decodeFoodRemove,
   decodeLeaderboard, decodeDeath, decodeRadar, decodeMultiplier,
   decodePowerupAdd, decodePowerupRemove, decodeAuthResult, decodeProfileData,
-  decodeChat, decodeKillFeed, decodeLeaderboardAlltime,
+  decodeLeaderboardAlltime,
   encodeLogin, encodeRegister, encodeAuthToken, encodeProfileRequest,
 } from '../../shared/protocol.js';
 

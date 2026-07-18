@@ -85,51 +85,63 @@ export class Game {
 
   _onSnapshot(snap) {
     const now = performance.now();
-    const seen = new Set();
-    for (const s of snap.snakes) {
-      seen.add(s.id);
+    const snakes = snap.snakes;
+
+    // Mark snakes as "seen" by setting a flag, avoid Set allocation.
+    // First clear previous flags.
+    for (const [, s] of this.state.snakes) s._seen = false;
+
+    for (let i = 0; i < snakes.length; i++) {
+      const s = snakes[i];
       const prev = this.state.snakes.get(s.id);
       const newLen = s.points.length;
 
-      // Convert incoming Int16Array to Float32Array to avoid quantization jitter.
       const nextPts = new Float32Array(newLen);
-      for (let i = 0; i < newLen; i++) nextPts[i] = s.points[i];
+      for (let j = 0; j < newLen; j++) nextPts[j] = s.points[j];
 
       let prevPts, renderPts;
       if (prev && prev.nextPts && prev.nextPts.length === newLen) {
-        // Previous snapshot becomes the "from" state; current becomes "to".
         prevPts = prev.nextPts;
         renderPts = prev.renderPts;
       } else {
-        // First sighting or length changed — snap directly to new position.
         prevPts = nextPts;
         renderPts = new Float32Array(newLen);
-        for (let i = 0; i < newLen; i++) renderPts[i] = nextPts[i];
+        for (let j = 0; j < newLen; j++) renderPts[j] = nextPts[j];
       }
 
-      const entry = {
-        id: s.id,
-        skin: s.skin,
-        score: s.score,
-        name: s.name,
-        prevPts,
-        nextPts,
-        renderPts,
-        snapTime: now,
-        boosting: s.boosting,
-        invuln: s.invuln,
-        effectiveMultiplier: s.effectiveMultiplier,
-        magnetTicks: s.magnetTicks,
-        speedTicks: s.speedTicks,
-        zoomTicks: s.zoomTicks,
-        boosters: s.boosters,
-      };
-      this.state.snakes.set(s.id, entry);
+      if (prev) {
+        prev.id = s.id;
+        prev.skin = s.skin;
+        prev.score = s.score;
+        prev.name = s.name;
+        prev.prevPts = prevPts;
+        prev.nextPts = nextPts;
+        prev.renderPts = renderPts;
+        prev.snapTime = now;
+        prev.boosting = s.boosting;
+        prev.invuln = s.invuln;
+        prev.effectiveMultiplier = s.effectiveMultiplier;
+        prev.magnetTicks = s.magnetTicks;
+        prev.speedTicks = s.speedTicks;
+        prev.zoomTicks = s.zoomTicks;
+        prev.boosters = s.boosters;
+        prev._seen = true;
+      } else {
+        this.state.snakes.set(s.id, {
+          id: s.id, skin: s.skin, score: s.score, name: s.name,
+          prevPts, nextPts, renderPts, snapTime: now,
+          boosting: s.boosting, invuln: s.invuln,
+          effectiveMultiplier: s.effectiveMultiplier,
+          magnetTicks: s.magnetTicks, speedTicks: s.speedTicks, zoomTicks: s.zoomTicks,
+          boosters: s.boosters, _seen: true,
+        });
+      }
     }
-    // Remove snakes not in this snapshot (left view or died) except keep my own
-    // briefly so rendering doesn't pop.
-    for (const id of Array.from(this.state.snakes.keys())) {
-      if (!seen.has(id) && id !== this.state.myId) this.state.snakes.delete(id);
+
+    // Remove snakes not in this snapshot.
+    const myId = this.state.myId;
+    for (const [id, s] of this.state.snakes) {
+      if (!s._seen && id !== myId) this.state.snakes.delete(id);
     }
 
     // Update my own score/alive flag.
@@ -208,21 +220,18 @@ export class Game {
     }
 
     // 2) Interpolate body points between previous and next snapshot positions.
-    //    This eliminates jitter from integer-quantized server coordinates.
-    const tickMs = 1000 / CONFIG.TICK_HZ; // 50ms at 20Hz
+    const tickMs = 50; // 1000 / CONFIG.TICK_HZ
+    const myId = this.state.myId;
     for (const s of this.state.snakes.values()) {
       const rp = s.renderPts;
       const pp = s.prevPts;
       const np = s.nextPts;
       if (!pp || !np) continue;
-      const n = Math.min(rp.length, pp.length, np.length);
-
+      const len = Math.min(rp.length, pp.length, np.length);
       const elapsed = now - s.snapTime;
-      const isMe = s.id === this.state.myId;
-      const maxT = isMe ? 1.3 : 1.05;
+      const maxT = s.id === myId ? 1.3 : 1.05;
       const t = Math.min(elapsed / tickMs, maxT);
-
-      for (let i = 0; i < n; i++) {
+      for (let i = 0; i < len; i++) {
         rp[i] = pp[i] + (np[i] - pp[i]) * t;
       }
     }
