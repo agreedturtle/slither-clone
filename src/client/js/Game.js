@@ -229,12 +229,10 @@ export class Game {
       if (!pp || !np) continue;
       const len = Math.min(rp.length, pp.length, np.length);
       const elapsed = now - s.snapTime;
-      // Clamp t to [0, 1] — no overshoot for smoothness.
-      const t = Math.min(elapsed / tickMs, 1.0);
-      // Smooth ease-out: de-accelerates at the end for less jerky motion.
-      const st = 1 - (1 - t) * (1 - t); // ease-out quadratic
+      const maxT = s.id === myId ? 1.3 : 1.05;
+      const t = Math.min(elapsed / tickMs, maxT);
       for (let i = 0; i < len; i++) {
-        rp[i] = pp[i] + (np[i] - pp[i]) * st;
+        rp[i] = pp[i] + (np[i] - pp[i]) * t;
       }
     }
 

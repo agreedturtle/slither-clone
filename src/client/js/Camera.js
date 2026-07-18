@@ -18,36 +18,19 @@ export class Camera {
     this._vbZoom = 0;
     this._vbX = 0;
     this._vbY = 0;
-
-    // Velocity tracking for smooth follow.
-    this._velX = 0;
-    this._velY = 0;
-    this._prevX = 0;
-    this._prevY = 0;
   }
 
   follow(tx, ty) {
-    const dtSec = this._lastDt / 1000;
-    // Exponential smoothing — lower base = smoother, slower response.
-    const baseEase = 0.12;
-    const ease = 1 - Math.pow(1 - baseEase, this._lastDt / 16.667);
-    // Smoothly ease toward target.
+    const ease = 1 - Math.pow(1 - 0.5, this._lastDt / 16.667);
     this.x += (tx - this.x) * ease;
     this.y += (ty - this.y) * ease;
-    // Track velocity for sub-frame smoothing.
-    if (dtSec > 0) {
-      this._velX = (this.x - this._prevX) / dtSec;
-      this._velY = (this.y - this._prevY) / dtSec;
-    }
-    this._prevX = this.x;
-    this._prevY = this.y;
   }
 
   setDt(dt) { this._lastDt = dt; }
 
   setZoom(target) {
     this._targetZoom = target;
-    const zEase = 1 - Math.pow(1 - 0.10, this._lastDt / 16.667);
+    const zEase = 1 - Math.pow(1 - 0.12, this._lastDt / 16.667);
     this.zoom += (this._targetZoom - this.zoom) * zEase;
   }
 
