@@ -845,6 +845,35 @@ export class Room {
         player.send(encodeAdminAck(true, `All boosters: ${mult}x + MAG + SPD + ZOOM`));
         break;
       }
+      case ADMIN.SET_SPEED: {
+        const speed = arg1 || 100;
+        this.speedMul = speed / 100;
+        player.send(encodeAdminAck(true, `Speed: ${this.speedMul.toFixed(2)}x`));
+        break;
+      }
+      case ADMIN.RESET_ARENA: {
+        let killed = 0;
+        for (const s of Array.from(this.snakes.values())) {
+          if (!s.dead) {
+            this._killSnake(s, null);
+            killed++;
+          }
+        }
+        const foodBefore = this.food.pellets.size;
+        this.food.pellets.clear();
+        this.food.addedQueue = [];
+        this.food.removedQueue = [];
+        for (const [, pup] of this.food.powerups) {
+          this.food.powerupRemoveQueue.push(pup.id);
+        }
+        this.food.powerups.clear();
+        this.food.seed();
+        this.bots = [];
+        this._respawnQueue = [];
+        this._maintainPopulation();
+        player.send(encodeAdminAck(true, `Arena reset: killed ${killed}, cleared ${foodBefore} food, respawned ${this.bots.length} bots`));
+        break;
+      }
       default:
         player.send(encodeAdminAck(false, `Unknown command: ${cmd}`));
     }

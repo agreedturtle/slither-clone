@@ -48,6 +48,7 @@ export const ADMIN = {
   GIVE_SPEED: 15,      // durationSec:u16 (default 40)
   GIVE_ZOOM: 16,       // durationSec:u16 (default 50)
   GIVE_ALL_BOOSTERS: 17, //
+  RESET_ARENA: 18,         //
 };
 
 // --- Server -> Client opcodes ---------------------------------------------
@@ -599,7 +600,7 @@ export function encodeProfileData(stats) {
 
 export function decodeProfileData(r) {
   const username = r.str();
-  const highScore = r.u32();
+  const highScore = r.f64();
   const totalKills = r.u16();
   const headshots = r.u16();
   const gamesPlayed = r.u16();

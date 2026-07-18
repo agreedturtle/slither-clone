@@ -228,6 +228,15 @@
           <button class="admin-btn accent" data-cmd="GIVE_BOOSTER">Give Booster</button>
           <button class="admin-btn accent" data-cmd="GIVE_ALL_BOOSTERS">Give ALL</button>
         </div>
+        <div class="admin-row">
+          <input id="adminSpeedVal" type="number" value="100" min="10" max="500" />
+          <button class="admin-btn" data-cmd="SET_SPEED">Set Speed %</button>
+        </div>
+        <div class="admin-row">
+          <input id="adminTeleportX" type="number" value="0" />
+          <input id="adminTeleportY" type="number" value="0" />
+          <button class="admin-btn" data-cmd="TELEPORT">Teleport</button>
+        </div>
       </div>
       <div class="admin-section">
         <span class="admin-section-title">World</span>
@@ -235,6 +244,9 @@
           <button class="admin-btn danger" data-cmd="KILL_ALL">Kill All</button>
           <button class="admin-btn" data-cmd="CLEAR_FOOD">Clear Food</button>
           <button class="admin-btn" data-cmd="REFILL_FOOD">Refill Food</button>
+        </div>
+        <div class="admin-row">
+          <button class="admin-btn danger" data-cmd="RESET_ARENA">Reset Arena</button>
         </div>
       </div>
     </div>

@@ -140,6 +140,21 @@ export class AdminPanel {
         this._send(ADMIN.GIVE_ALL_BOOSTERS, mult);
         break;
       }
+      case 'SET_SPEED': {
+        const speed = parseInt(document.getElementById('adminSpeedVal').value) || 100;
+        this._send(ADMIN.SET_SPEED, speed);
+        break;
+      }
+      case 'TELEPORT': {
+        const tx = parseInt(document.getElementById('adminTeleportX').value) || 0;
+        const ty = parseInt(document.getElementById('adminTeleportY').value) || 0;
+        this._send(ADMIN.TELEPORT, tx, ty);
+        break;
+      }
+      case 'RESET_ARENA': {
+        this._send(ADMIN.RESET_ARENA);
+        break;
+      }
     }
   }
 }
