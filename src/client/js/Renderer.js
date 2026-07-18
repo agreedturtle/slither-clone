@@ -341,33 +341,42 @@ export class Renderer {
         ctx.stroke();
       }
     } else if (isSplit) {
-      // Sideways split: two wavy half-stripes, offset perpendicular to the body.
+      // Lengthwise split: left half blue, right half yellow, wavy border.
       const cols = skin.split || ['#2255CC', '#E8D44D'];
       const half = lineWidth * 0.5;
-      const offsets = [-1, 1];
-      for (let side = 0; side < 2; side++) {
-        const off = offsets[side];
-        ctx.strokeStyle = cols[side];
-        ctx.lineWidth = half;
-        ctx.beginPath();
-        for (let i = 0; i < count; i++) {
-          const px = screen[i * 2], py = screen[i * 2 + 1];
-          let nx, ny;
-          if (i === 0) {
-            nx = screen[2] - px; ny = screen[3] - py;
-          } else if (i === count - 1) {
-            nx = px - screen[(i - 1) * 2]; ny = py - screen[(i - 1) * 2 + 1];
-          } else {
-            nx = screen[(i + 1) * 2] - screen[(i - 1) * 2];
-            ny = screen[(i + 1) * 2 + 1] - screen[(i - 1) * 2 + 1];
-          }
-          const len = Math.sqrt(nx * nx + ny * ny) || 1;
-          const perpX = -ny / len * half * 0.5 * off;
-          const perpY = nx / len * half * 0.5 * off;
-          if (i === 0) ctx.moveTo(px + perpX, py + perpY);
-          else ctx.lineTo(px + perpX, py + perpY);
+      const waveAmp = lineWidth * 0.18;
+      const waveFreq = 0.12;
+      const perps = new Float32Array(count * 2);
+      for (let i = 0; i < count; i++) {
+        let dx, dy;
+        if (i === 0) {
+          dx = screen[2] - screen[0]; dy = screen[3] - screen[1];
+        } else if (i === count - 1) {
+          dx = screen[(count - 1) * 2] - screen[(count - 2) * 2];
+          dy = screen[(count - 1) * 2 + 1] - screen[(count - 2) * 2 + 1];
+        } else {
+          dx = screen[(i + 1) * 2] - screen[(i - 1) * 2];
+          dy = screen[(i + 1) * 2 + 1] - screen[(i - 1) * 2 + 1];
         }
-        ctx.stroke();
+        const len = Math.sqrt(dx * dx + dy * dy) || 1;
+        perps[i * 2] = -dy / len;
+        perps[i * 2 + 1] = dx / len;
+      }
+      for (let side = 0; side < 2; side++) {
+        const dir = side === 0 ? -1 : 1;
+        ctx.fillStyle = cols[side];
+        ctx.beginPath();
+        ctx.moveTo(screen[0], screen[1]);
+        for (let i = 1; i < count; i++) ctx.lineTo(screen[i * 2], screen[i * 2 + 1]);
+        for (let i = count - 1; i >= 0; i--) {
+          const wave = Math.sin(i * waveFreq + performance.now() * 0.002) * waveAmp;
+          ctx.lineTo(
+            screen[i * 2] + perps[i * 2] * (half + wave) * dir,
+            screen[i * 2 + 1] + perps[i * 2 + 1] * (half + wave) * dir
+          );
+        }
+        ctx.closePath();
+        ctx.fill();
       }
     } else {
       ctx.strokeStyle = skin.main;
