@@ -286,6 +286,7 @@ export class Renderer {
     }
 
     const isMultiColor = skin.main === 'rainbow' || skin.main === 'combo';
+    const isSplit = skin.main === 'split';
     const skinColors = skin.colors || RAINBOW_STOPS;
 
     ctx.lineJoin = 'round';
@@ -339,6 +340,21 @@ export class Renderer {
         for (let i = start + 1; i <= end; i++) ctx.lineTo(screen[i * 2], screen[i * 2 + 1]);
         ctx.stroke();
       }
+    } else if (isSplit) {
+      // Sideways split: full body in split[0], centered stripe in split[1].
+      const cols = skin.split || ['#2255CC', '#E8D44D'];
+      ctx.strokeStyle = cols[0];
+      ctx.lineWidth = lineWidth;
+      ctx.beginPath();
+      ctx.moveTo(screen[0], screen[1]);
+      for (let i = 1; i < count; i++) ctx.lineTo(screen[i * 2], screen[i * 2 + 1]);
+      ctx.stroke();
+      ctx.strokeStyle = cols[1];
+      ctx.lineWidth = lineWidth * 0.5;
+      ctx.beginPath();
+      ctx.moveTo(screen[0], screen[1]);
+      for (let i = 1; i < count; i++) ctx.lineTo(screen[i * 2], screen[i * 2 + 1]);
+      ctx.stroke();
     } else {
       ctx.strokeStyle = skin.main;
       ctx.lineWidth = lineWidth;

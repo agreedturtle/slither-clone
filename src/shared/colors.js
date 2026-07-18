@@ -20,8 +20,8 @@ export const SKINS = [
     colors: ['#00CED1', '#20B2AA', '#20B2AA', '#00CED1'] },
   { name: 'Crimson',    main: 'combo',   shade: '#8B1A1A', glow: '#FF6666',
     colors: ['#FF4444', '#3388FF', '#FF4444', '#3388FF'] },
-  { name: 'Royal',      main: 'combo',   shade: '#1A3A8B', glow: '#00FFFF',
-    colors: ['#2255CC', '#E8D44D', '#2255CC', '#E8D44D', '#2255CC', '#E8D44D'] },
+  { name: 'Royal',      main: 'split',   shade: '#1A3A8B', glow: '#00FFFF',
+    split: ['#2255CC', '#E8D44D'] },
 ];
 
 export const RAINBOW_STOPS = [
