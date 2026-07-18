@@ -30,13 +30,15 @@ export class Database {
       await this.pool.query(`
         CREATE TABLE IF NOT EXISTS stats (
           username TEXT PRIMARY KEY REFERENCES users(username),
-          high_score INTEGER DEFAULT 0,
+          high_score BIGINT DEFAULT 0,
           total_kills INTEGER DEFAULT 0,
           headshots INTEGER DEFAULT 0,
           games_played INTEGER DEFAULT 0,
           deaths INTEGER DEFAULT 0
         )
       `);
+      // Migrate old INTEGER high_score columns to BIGINT if needed.
+      await this.pool.query(`ALTER TABLE stats ALTER COLUMN high_score TYPE BIGINT`).catch(() => {});
       console.log('[db] PostgreSQL connected, tables ready.');
     } catch (e) {
       console.error('[db] Failed to connect:', e.message);

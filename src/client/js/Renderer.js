@@ -18,8 +18,6 @@ export class Renderer {
     this._resize();
     window.addEventListener('resize', () => this._resize());
 
-    this._foodSprites = new Map();
-    this._buildFoodSprites();
     this._frame = 0;
 
     this._screenBuf = new Float32Array(8192);
@@ -43,17 +41,18 @@ export class Renderer {
   toggleLowGraphics() { this.lowGraphics = !this.lowGraphics; }
 
   _buildFoodSprites() {
-    const size = 24;
+    const size = 32;
     const colors = [...FOOD_COLORS, FOOD_DEATH_COLOR];
     for (let ci = 0; ci < colors.length; ci++) {
       const c = document.createElement('canvas');
       c.width = c.height = size;
       const g = c.getContext('2d');
       const cx = size / 2, r = size / 2;
-      const grad = g.createRadialGradient(cx, cx, 0, cx, cx, r);
+      const grad = g.createRadialGradient(cx - 1, cx - 1, 0, cx, cx, r);
       const col = colors[ci];
       grad.addColorStop(0, '#ffffff');
-      grad.addColorStop(0.25, col);
+      grad.addColorStop(0.15, '#ffffff');
+      grad.addColorStop(0.35, col);
       grad.addColorStop(1, 'rgba(0,0,0,0)');
       g.fillStyle = grad;
       g.beginPath();
@@ -70,7 +69,14 @@ export class Renderer {
     this._W = W;
     this._H = H;
 
-    ctx.fillStyle = '#0d1117';
+    // Background — subtle radial gradient for depth.
+    if (!this._bgGrad || this._bgW !== W || this._bgH !== H) {
+      this._bgGrad = ctx.createRadialGradient(W * 0.5, H * 0.5, 0, W * 0.5, H * 0.5, Math.max(W, H) * 0.7);
+      this._bgGrad.addColorStop(0, '#111822');
+      this._bgGrad.addColorStop(1, '#080c12');
+      this._bgW = W; this._bgH = H;
+    }
+    ctx.fillStyle = this._bgGrad;
     ctx.fillRect(0, 0, W, H);
 
     this._drawGrid(ctx, cam, W, H);
@@ -89,9 +95,10 @@ export class Renderer {
       const v = document.createElement('canvas');
       v.width = 256; v.height = 256;
       const g = v.getContext('2d');
-      const grad = g.createRadialGradient(128, 128, 60, 128, 128, 150);
+      const grad = g.createRadialGradient(128, 128, 50, 128, 128, 160);
       grad.addColorStop(0, 'rgba(0,0,0,0)');
-      grad.addColorStop(1, 'rgba(0,0,0,0.55)');
+      grad.addColorStop(0.6, 'rgba(0,0,0,0)');
+      grad.addColorStop(1, 'rgba(0,0,0,0.45)');
       g.fillStyle = grad;
       g.fillRect(0, 0, 256, 256);
       this._vignette = v;
@@ -105,17 +112,40 @@ export class Renderer {
     const vb = cam.viewBounds();
     const startX = Math.floor(vb.minX / step) * step;
     const startY = Math.floor(vb.minY / step) * step;
-    ctx.lineWidth = 1;
-    ctx.strokeStyle = 'rgba(120,160,210,0.06)';
-    const halfW = W * 0.5, halfH = H * 0.5;
     const zoom = cam.zoom;
+    const halfW = W * 0.5, halfH = H * 0.5;
+    // Major grid lines (every 500 units) are slightly brighter.
+    const majorStep = 500;
+    const majorStartX = Math.floor(vb.minX / majorStep) * majorStep;
+    const majorStartY = Math.floor(vb.minY / majorStep) * majorStep;
+
+    // Minor lines.
+    ctx.lineWidth = 1;
+    ctx.strokeStyle = 'rgba(120,160,210,0.045)';
     ctx.beginPath();
     for (let x = startX; x <= vb.maxX; x += step) {
+      if (x % majorStep === 0) continue;
       const sx = (x - cam.x) * zoom + halfW;
       ctx.moveTo(sx, (vb.minY - cam.y) * zoom + halfH);
       ctx.lineTo(sx, (vb.maxY - cam.y) * zoom + halfH);
     }
     for (let y = startY; y <= vb.maxY; y += step) {
+      if (y % majorStep === 0) continue;
+      const sy = (y - cam.y) * zoom + halfH;
+      ctx.moveTo((vb.minX - cam.x) * zoom + halfW, sy);
+      ctx.lineTo((vb.maxX - cam.x) * zoom + halfW, sy);
+    }
+    ctx.stroke();
+
+    // Major lines.
+    ctx.strokeStyle = 'rgba(120,160,210,0.09)';
+    ctx.beginPath();
+    for (let x = majorStartX; x <= vb.maxX; x += majorStep) {
+      const sx = (x - cam.x) * zoom + halfW;
+      ctx.moveTo(sx, (vb.minY - cam.y) * zoom + halfH);
+      ctx.lineTo(sx, (vb.maxY - cam.y) * zoom + halfH);
+    }
+    for (let y = majorStartY; y <= vb.maxY; y += majorStep) {
       const sy = (y - cam.y) * zoom + halfH;
       ctx.moveTo((vb.minX - cam.x) * zoom + halfW, sy);
       ctx.lineTo((vb.maxX - cam.x) * zoom + halfW, sy);
@@ -129,22 +159,26 @@ export class Renderer {
     const cx = (0 - cam.x) * zoom + W * 0.5;
     const cy = (0 - cam.y) * zoom + H * 0.5;
     const rad = r * zoom;
-    ctx.strokeStyle = 'rgba(255,120,120,0.55)';
+    const pulse = this.lowGraphics ? 1 : (1 + Math.sin(this._frame * 0.03) * 0.15);
+    ctx.strokeStyle = `rgba(255,100,100,${0.45 * pulse})`;
     ctx.lineWidth = 4;
     ctx.beginPath();
     ctx.arc(cx, cy, rad, 0, Math.PI * 2);
     ctx.stroke();
     if (!this.lowGraphics) {
-      ctx.fillStyle = 'rgba(255,120,120,0.04)';
+      // Outer glow ring.
+      ctx.strokeStyle = `rgba(255,80,80,${0.12 * pulse})`;
+      ctx.lineWidth = 18;
+      ctx.beginPath();
+      ctx.arc(cx, cy, rad + 8, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.fillStyle = 'rgba(255,100,100,0.025)';
       ctx.fill();
     }
   }
 
   _drawFood(ctx, state, cam) {
-    const sprites = this._foodSprites;
     const scale = cam.zoom;
-    const fallback = sprites.get(FOOD_COLORS.length);
-    const pulse = 1 + Math.sin(this._frame * 0.08) * 0.06;
     const halfW = this._W * 0.5, halfH = this._H * 0.5;
     const camX = cam.x, camY = cam.y;
     const vb = cam.viewBounds();
@@ -163,15 +197,29 @@ export class Renderer {
       return;
     }
 
-    // Normal mode: sprites with viewport culling
+    // Normal mode: draw food as smooth circles with radial gradients.
     for (const f of state.food.values()) {
       if (f.x < vb.minX - pad || f.x > vb.maxX + pad || f.y < vb.minY - pad || f.y > vb.maxY + pad) continue;
-      const sprite = sprites.get(f.colorIdx) || fallback;
-      if (!sprite) continue;
-      const s = (f.size / 5) * 12 * scale * pulse;
+      const r = Math.max(2, (f.size / 5) * 12 * scale);
       const px = (f.x - camX) * scale + halfW;
       const py = (f.y - camY) * scale + halfH;
-      ctx.drawImage(sprite, px - s, py - s, s * 2, s * 2);
+      const colors = FOOD_COLORS;
+      const col = f.colorIdx < colors.length ? colors[f.colorIdx] : FOOD_DEATH_COLOR;
+      if (r < 3) {
+        ctx.fillStyle = col;
+        ctx.beginPath();
+        ctx.arc(px, py, r, 0, 6.2832);
+        ctx.fill();
+      } else {
+        const grad = ctx.createRadialGradient(px - r * 0.2, py - r * 0.2, 0, px, py, r);
+        grad.addColorStop(0, '#ffffff');
+        grad.addColorStop(0.3, col);
+        grad.addColorStop(1, col);
+        ctx.fillStyle = grad;
+        ctx.beginPath();
+        ctx.arc(px, py, r, 0, 6.2832);
+        ctx.fill();
+      }
     }
   }
 
@@ -194,35 +242,39 @@ export class Renderer {
         ctx.fill();
         continue;
       }
-      const bob = Math.sin(this._frame * 0.06 + pup.id) * r * 0.12;
+      const bob = Math.sin(this._frame * 0.05 + pup.id) * r * 0.10;
       const ppy = py + bob;
-      ctx.fillStyle = 'rgba(255,255,255,0.15)';
+      // Glass orb effect — layered translucent circles.
+      ctx.fillStyle = 'rgba(255,255,255,0.08)';
       ctx.beginPath();
-      ctx.arc(px, ppy + r * 0.2, r * 0.85, 0, 6.2832);
+      ctx.arc(px, ppy + r * 0.15, r * 0.9, 0, 6.2832);
       ctx.fill();
+      // Bottom half (filled).
       ctx.fillStyle = col;
-      ctx.globalAlpha = 0.85;
+      ctx.globalAlpha = 0.82;
       ctx.beginPath();
-      ctx.arc(px, ppy + r * 0.2, r * 0.78, 0, 3.1416);
+      ctx.arc(px, ppy + r * 0.15, r * 0.78, 0, 3.1416);
       ctx.fill();
-      ctx.fillRect(px - r * 0.78, ppy + r * 0.2, r * 1.56, r * 0.55);
+      ctx.fillRect(px - r * 0.78, ppy + r * 0.15, r * 1.56, r * 0.52);
+      // Top half (cap).
       ctx.beginPath();
-      ctx.arc(px, ppy + r * 0.75, r * 0.78, 3.1416, 0);
+      ctx.arc(px, ppy + r * 0.67, r * 0.78, 3.1416, 0);
       ctx.fill();
       ctx.globalAlpha = 1;
-      ctx.fillStyle = 'rgba(255,255,255,0.2)';
-      ctx.fillRect(px - r * 0.18, ppy - r * 0.7, r * 0.36, r * 0.6);
-      ctx.fillStyle = '#c09060';
-      ctx.fillRect(px - r * 0.22, ppy - r * 0.95, r * 0.44, r * 0.3);
-      ctx.fillStyle = 'rgba(255,255,255,0.4)';
+      // Glass shine.
+      ctx.fillStyle = 'rgba(255,255,255,0.22)';
       ctx.beginPath();
-      ctx.ellipse(px - r * 0.25, ppy + r * 0.05, r * 0.12, r * 0.35, -0.3, 0, 6.2832);
+      ctx.ellipse(px - r * 0.22, ppy + r * 0.0, r * 0.10, r * 0.32, -0.3, 0, 6.2832);
       ctx.fill();
-      ctx.fillStyle = '#000';
-      ctx.font = `bold ${Math.max(9, r * 0.65)}px sans-serif`;
+      // Cork.
+      ctx.fillStyle = '#c09060';
+      ctx.fillRect(px - r * 0.20, ppy - r * 0.90, r * 0.40, r * 0.28);
+      // Label.
+      ctx.fillStyle = '#fff';
+      ctx.font = `bold ${Math.max(8, r * 0.60)}px sans-serif`;
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
-      ctx.fillText(pup.type === 'magnet' ? 'M' : pup.type === 'speed' ? 'S' : pup.type === 'zoom' ? 'Z' : (pup.mult + 'x'), px, ppy + r * 0.35);
+      ctx.fillText(pup.type === 'magnet' ? 'M' : pup.type === 'speed' ? 'S' : pup.type === 'zoom' ? 'Z' : (pup.mult + 'x'), px, ppy + r * 0.32);
     }
     ctx.globalAlpha = 1;
   }
@@ -288,10 +340,11 @@ export class Renderer {
     ctx.lineJoin = 'round';
     ctx.lineCap = 'round';
 
+    // Soft outer glow (body shadow).
     if (!this.lowGraphics) {
       ctx.strokeStyle = skin.shade;
-      ctx.lineWidth = lineWidth + 10;
-      ctx.globalAlpha = 0.2;
+      ctx.lineWidth = lineWidth + 14;
+      ctx.globalAlpha = 0.12;
       ctx.beginPath();
       ctx.moveTo(screen[0], screen[1]);
       for (let i = 1; i < count; i++) ctx.lineTo(screen[i * 2], screen[i * 2 + 1]);
@@ -299,20 +352,22 @@ export class Renderer {
       ctx.globalAlpha = 1;
     }
 
+    // Dark outline pass.
     ctx.strokeStyle = skin.shade;
-    ctx.lineWidth = lineWidth + 2;
+    ctx.lineWidth = lineWidth + 3;
     ctx.beginPath();
     ctx.moveTo(screen[0], screen[1]);
     for (let i = 1; i < count; i++) ctx.lineTo(screen[i * 2], screen[i * 2 + 1]);
     ctx.stroke();
 
+    // Glow pass for big snakes.
     if (!this.lowGraphics && bodyR > 12) {
       ctx.save();
       ctx.shadowColor = skin.glow;
-      ctx.shadowBlur = Math.min(30, bodyR * 0.6);
+      ctx.shadowBlur = Math.min(24, bodyR * 0.5);
       ctx.strokeStyle = skin.glow;
-      ctx.globalAlpha = 0.35;
-      ctx.lineWidth = lineWidth + 6;
+      ctx.globalAlpha = 0.30;
+      ctx.lineWidth = lineWidth + 8;
       ctx.beginPath();
       ctx.moveTo(screen[0], screen[1]);
       for (let i = 1; i < count; i++) ctx.lineTo(screen[i * 2], screen[i * 2 + 1]);
@@ -321,6 +376,7 @@ export class Renderer {
       ctx.globalAlpha = 1;
     }
 
+    // Main body pass (multi-color or solid).
     if (isMultiColor) {
       const chunk = 6;
       for (let start = 0; start + 1 < count; start += chunk) {
@@ -340,10 +396,11 @@ export class Renderer {
       for (let i = 1; i < count; i++) ctx.lineTo(screen[i * 2], screen[i * 2 + 1]);
       ctx.stroke();
 
+      // Inner highlight for depth.
       if (!this.lowGraphics) {
         ctx.strokeStyle = skin.glow;
-        ctx.globalAlpha = 0.45;
-        ctx.lineWidth = lineWidth * 0.32;
+        ctx.globalAlpha = 0.35;
+        ctx.lineWidth = lineWidth * 0.28;
         ctx.beginPath();
         ctx.moveTo(screen[0], screen[1]);
         for (let i = 1; i < count; i++) ctx.lineTo(screen[i * 2], screen[i * 2 + 1]);
@@ -352,13 +409,24 @@ export class Renderer {
       }
     }
 
+    // Head.
     const hx = screen[0], hy = screen[1];
 
-    ctx.fillStyle = skin.head || skin.glow;
+    // Head radial gradient for depth.
+    if (!this.lowGraphics) {
+      const headGrad = ctx.createRadialGradient(hx, hy, 0, hx, hy, bodyR);
+      headGrad.addColorStop(0, skin.head || skin.glow);
+      headGrad.addColorStop(0.7, skin.main);
+      headGrad.addColorStop(1, skin.shade);
+      ctx.fillStyle = headGrad;
+    } else {
+      ctx.fillStyle = skin.head || skin.glow;
+    }
     ctx.beginPath();
     ctx.arc(hx, hy, bodyR, 0, 6.2832);
     ctx.fill();
 
+    // Eyes.
     {
       const ang = count >= 2 ? Math.atan2(screen[1] - screen[3], screen[0] - screen[2]) : 0;
       const eo = bodyR * 0.48;
@@ -388,6 +456,7 @@ export class Renderer {
       }
     }
 
+    // Name and invuln ring.
     if (!this.lowGraphics) {
       ctx.fillStyle = 'rgba(230,240,255,0.85)';
       ctx.font = NAME_FONT;
