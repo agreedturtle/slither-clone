@@ -15,7 +15,11 @@ import url from 'node:url';
 import { WebSocketServer } from 'ws';
 
 import { Room } from './Room.js';
-import { decodeClientMessage, C2S } from '../shared/protocol.js';
+import { Database } from './Database.js';
+import {
+  decodeClientMessage, C2S,
+  encodeAuthResult, encodeProfileData,
+} from '../shared/protocol.js';
 
 const __dirname = path.dirname(url.fileURLToPath(import.meta.url));
 const CLIENT_DIR = path.join(__dirname, '..', 'client');
@@ -87,6 +91,8 @@ const httpServer = http.createServer(serveStatic);
 // --- WebSocket server -------------------------------------------------------
 const wss = new WebSocketServer({ server: httpServer, path: '/' });
 const room = new Room();
+const db = new Database();
+room.db = db; // attach database to room for stat tracking
 
 const idleTimers = new WeakMap(); // ws -> timer
 
@@ -125,6 +131,55 @@ wss.on('connection', (ws) => {
         case C2S.PING:    room.handlePing(player, msg); break;
         case C2S.ADMIN:   room.handleAdmin(player, msg); break;
         case C2S.MULTIPLIER: room.handleMultiplier(player); break;
+        case C2S.LOGIN: {
+          const result = db.login(msg.username, msg.password);
+          try {
+            const resp = encodeAuthResult(result.ok, result.msg || '', result.token || '', result.username || '');
+            ws.send(resp);
+          } catch (_) {}
+          if (result.ok) {
+            player.username = result.username;
+            player.stats = db.getStats(result.username);
+          }
+          break;
+        }
+        case C2S.REGISTER: {
+          const result = db.register(msg.username, msg.password);
+          try {
+            const resp = encodeAuthResult(result.ok, result.msg || '', result.token || '', result.username || '');
+            ws.send(resp);
+          } catch (_) {}
+          if (result.ok) {
+            player.username = result.username;
+            player.stats = db.getStats(result.username);
+          }
+          break;
+        }
+        case C2S.AUTH_TOKEN: {
+          const username = db.validateToken(msg.token);
+          if (username) {
+            player.username = username;
+            player.stats = db.getStats(username);
+            try {
+              const resp = encodeAuthResult(true, '', msg.token, username);
+              ws.send(resp);
+            } catch (_) {}
+          } else {
+            try {
+              const resp = encodeAuthResult(false, 'Invalid or expired token', '', '');
+              ws.send(resp);
+            } catch (_) {}
+          }
+          break;
+        }
+        case C2S.PROFILE: {
+          if (player.username && player.stats) {
+            try {
+              ws.send(encodeProfileData({ username: player.username, ...player.stats }));
+            } catch (_) {}
+          }
+          break;
+        }
         default: break;
       }
     } catch (err) {

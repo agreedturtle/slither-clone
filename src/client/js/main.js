@@ -23,6 +23,110 @@ const adminPanel = new AdminPanel(net);
 
 const game = new Game({ net, renderer, camera, input, hud, ui });
 
+// ---- Auth state ----
+let authState = { token: null, username: null };
+
+// Try to restore saved token
+const savedToken = localStorage.getItem('slither_token');
+const savedUsername = localStorage.getItem('slither_username');
+if (savedToken && savedUsername) {
+  authState.token = savedToken;
+  authState.username = savedUsername;
+  ui.showLoggedIn(savedUsername);
+}
+
+// ---- Auth UI wiring ----
+let authMode = 'login'; // 'login' or 'register'
+
+ui.loginBtn.addEventListener('click', () => {
+  ui.hideMenu();
+  ui.showLoginScreen();
+});
+
+ui.authLoginTab.addEventListener('click', () => {
+  authMode = 'login';
+  ui.setAuthMode('login');
+});
+
+ui.authRegisterTab.addEventListener('click', () => {
+  authMode = 'register';
+  ui.setAuthMode('register');
+});
+
+ui.authSubmitBtn.addEventListener('click', () => {
+  const username = ui.authUsername.value.trim();
+  const password = ui.authPassword.value;
+  if (!username || !password) {
+    ui.showAuthError('Enter username and password');
+    return;
+  }
+  if (authMode === 'login') {
+    net.sendLogin(username, password);
+  } else {
+    net.sendRegister(username, password);
+  }
+});
+
+ui.authBackBtn.addEventListener('click', () => {
+  ui.hideLoginScreen();
+  ui.showMenu();
+});
+
+ui.authGuestBtn.addEventListener('click', () => {
+  authState.token = null;
+  authState.username = null;
+  ui.hideLoginScreen();
+  ui.showMenu();
+});
+
+ui.profileBtn.addEventListener('click', () => {
+  ui.hideMenu();
+  ui.showProfile();
+  net.sendProfileRequest();
+});
+
+ui.profileBackBtn.addEventListener('click', () => {
+  ui.hideProfile();
+  ui.showMenu();
+});
+
+ui.profileLogoutBtn.addEventListener('click', () => {
+  authState.token = null;
+  authState.username = null;
+  localStorage.removeItem('slither_token');
+  localStorage.removeItem('slither_username');
+  ui.showLoggedOut();
+  ui.hideProfile();
+  ui.showMenu();
+});
+
+// ---- Auth results ----
+net.on('authResult', (d) => {
+  if (d.ok) {
+    authState.token = d.token;
+    authState.username = d.username;
+    localStorage.setItem('slither_token', d.token);
+    localStorage.setItem('slither_username', d.username);
+    ui.showAuthSuccess(`Logged in as ${d.username}`);
+    ui.showLoggedIn(d.username);
+    setTimeout(() => {
+      ui.hideLoginScreen();
+      ui.showMenu();
+    }, 800);
+  } else {
+    ui.showAuthError(d.msg || 'Failed');
+  }
+});
+
+net.on('profileData', (d) => {
+  ui.updateProfile(d);
+});
+
+net.on('headshot', (d) => {
+  // Could show a notification; for now just console log
+  console.log(`Headshot! ${d.killer} -> ${d.victim}`);
+});
+
 // ---- Button wiring ----
 ui.playBtn.addEventListener('click', () => {
   if (!net.connected) return;

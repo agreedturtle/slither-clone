@@ -24,7 +24,7 @@ import {
   encodeSnapshot, encodeFoodAdd, encodeFoodRemove, encodeLeaderboard,
   encodeDeath, encodeRemoveSnake, encodeWelcome, encodePong, encodeError,
   encodeRadar, encodeAdminAck, encodeMultiplier,
-  encodePowerupAdd, encodePowerupRemove,
+  encodePowerupAdd, encodePowerupRemove, encodeHeadshot,
 } from '../shared/protocol.js';
 import { ADMIN } from '../shared/protocol.js';
 
@@ -406,6 +406,27 @@ export class Room {
       this.food._spawnAt(snake._bodyX[0], snake._bodyY[0], pebbleValue, true);
     }
 
+    // Track stats: death
+    if (this.db && snake.playerRef && snake.playerRef.username) {
+      this.db.recordDeath(snake.playerRef.username, snake.score);
+    }
+
+    // Track stats: kill for the killer
+    if (this.db && killer && killer.playerRef && killer.playerRef.username) {
+      // Headshot = killer's head hit victim's head area
+      const dx = killer.headX - snake.headX;
+      const dy = killer.headY - snake.headY;
+      const headDist = Math.sqrt(dx * dx + dy * dy);
+      const isHeadshot = headDist < (killer.bodyRadius + snake.bodyRadius);
+      this.db.recordKill(killer.playerRef.username, isHeadshot);
+      // Send headshot notification to both players
+      if (isHeadshot && killer.playerRef.send) {
+        try {
+          killer.playerRef.send(encodeHeadshot(killer.playerRef.username, snake.playerRef.username));
+        } catch (_) {}
+      }
+    }
+
     // Remove from world.
     this.snakes.delete(snake.id);
     this._pendingRemoves.push(snake.id);
@@ -598,6 +619,10 @@ export class Room {
     // snapshots key snakes by snake.id and the client looks up its own snake
     // with this value. The snake id is fresh on every (re)spawn.
     player.send(encodeWelcome({ id: player.snake.id }));
+    // Track game started
+    if (this.db && player.username) {
+      this.db.recordGame(player.username);
+    }
   }
 
   handleInput(player, payload) {

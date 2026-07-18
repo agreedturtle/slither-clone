@@ -20,6 +20,10 @@ export const C2S = {
   PING: 4,     // { t:u32 }   client clock for RTT
   ADMIN: 5,    // { cmd:u8, password:str, ...args }   admin commands
   MULTIPLIER: 6, // {} request multiplier cycle
+  LOGIN: 7,       // { username:str, password:str }
+  REGISTER: 8,    // { username:str, password:str }
+  AUTH_TOKEN: 9,  // { token:str }   auto-login with saved token
+  PROFILE: 10,    // {}   request own stats
 };
 
 // Admin sub-commands (the `cmd` byte inside an ADMIN frame).
@@ -56,6 +60,9 @@ export const S2C = {
   MULTIPLIER: 12,    // { mult:u8, ticksLeft:u16 }   multiplier state update
   POWERUP_ADD: 13,   // count:u16, [ id:u32, x:f32, y:f32, mult:u8 ]*
   POWERUP_REMOVE: 14, // count:u16, [ id:u32 ]*
+  AUTH_RESULT: 15,    // { ok:u8, msg:utf8, token:utf8, username:utf8 }
+  PROFILE_DATA: 16,   // { username:utf8, highScore:u32, totalKills:u16, headshots:u16, gamesPlayed:u16, deaths:u16 }
+  HEADSHOT: 17,       // { killerName:utf8, victimName:utf8 }   kill notification
 };
 
 // We ship the number of skins/colors over the wire too so the client can map
@@ -431,6 +438,25 @@ export function decodeClientMessage(u8) {
     }
     case C2S.MULTIPLIER:
       return { op };
+    case C2S.LOGIN: {
+      const username = r.str();
+      const password = r.str();
+      if (username === undefined || password === undefined) return null;
+      return { op, username: sanitizeName(username), password };
+    }
+    case C2S.REGISTER: {
+      const username = r.str();
+      const password = r.str();
+      if (username === undefined || password === undefined) return null;
+      return { op, username: sanitizeName(username), password };
+    }
+    case C2S.AUTH_TOKEN: {
+      const token = r.str();
+      if (token === undefined) return null;
+      return { op, token };
+    }
+    case C2S.PROFILE:
+      return { op };
     default:
       return null;
   }
@@ -499,4 +525,98 @@ export function decodePowerupRemove(r) {
     ids.push(id);
   }
   return { ids };
+}
+
+// --- Auth ---
+
+export function encodeAuthResult(ok, msg, token, username) {
+  const w = new Writer(128);
+  w.op(S2C.AUTH_RESULT).u8(ok ? 1 : 0).str(msg).str(token || '').str(username || '');
+  return w.toUint8();
+}
+
+export function decodeAuthResult(r) {
+  const ok = r.u8();
+  const msg = r.str();
+  const token = r.str();
+  const username = r.str();
+  if (ok === undefined) return null;
+  return { ok: ok === 1, msg, token, username };
+}
+
+export function encodeProfileData(stats) {
+  const w = new Writer(128);
+  w.op(S2C.PROFILE_DATA)
+    .str(stats.username)
+    .u32(stats.highScore >>> 0)
+    .u16(Math.min(stats.totalKills, 65535))
+    .u16(Math.min(stats.headshots, 65535))
+    .u16(Math.min(stats.gamesPlayed, 65535))
+    .u16(Math.min(stats.deaths, 65535));
+  return w.toUint8();
+}
+
+export function decodeProfileData(r) {
+  const username = r.str();
+  const highScore = r.u32();
+  const totalKills = r.u16();
+  const headshots = r.u16();
+  const gamesPlayed = r.u16();
+  const deaths = r.u16();
+  if (highScore === undefined) return null;
+  return { username, highScore, totalKills, headshots, gamesPlayed, deaths };
+}
+
+export function encodeHeadshot(killerName, victimName) {
+  const w = new Writer(64);
+  w.op(S2C.HEADSHOT).str(killerName).str(victimName);
+  return w.toUint8();
+}
+
+// --- Client encoders for auth ---
+
+export function encodeLogin(username, password) {
+  const w = new Writer(128);
+  w.op(C2S.LOGIN).str(username).str(password);
+  return w.toUint8();
+}
+
+export function encodeRegister(username, password) {
+  const w = new Writer(128);
+  w.op(C2S.REGISTER).str(username).str(password);
+  return w.toUint8();
+}
+
+export function encodeAuthToken(token) {
+  const w = new Writer(64);
+  w.op(C2S.AUTH_TOKEN).str(token);
+  return w.toUint8();
+}
+
+export function encodeProfileRequest() {
+  const w = new Writer(4);
+  w.op(C2S.PROFILE);
+  return w.toUint8();
+}
+
+// --- Server-side auth decoders ---
+
+export function decodeLogin(r) {
+  const username = r.str();
+  const password = r.str();
+  if (username === undefined || password === undefined) return null;
+  return { username, password };
+}
+
+export function decodeRegister(r) {
+  const username = r.str();
+  const password = r.str();
+  if (username === undefined || password === undefined) return null;
+  return { username, password };
+}
+
+export function decodeAuthToken(r) {
+  const token = r.str();
+  if (token === undefined) return null;
+  return { token };
 }

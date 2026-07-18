@@ -12,7 +12,9 @@
 import { C2S, S2C, Writer, Reader,
   decodeWelcome, decodeSnapshot, decodeFoodAdd, decodeFoodRemove,
   decodeLeaderboard, decodeDeath, decodeRadar, decodeMultiplier,
-  decodePowerupAdd, decodePowerupRemove } from '../../shared/protocol.js';
+  decodePowerupAdd, decodePowerupRemove, decodeAuthResult, decodeProfileData,
+  encodeLogin, encodeRegister, encodeAuthToken, encodeProfileRequest,
+} from '../../shared/protocol.js';
 
 export class Net {
   constructor() {
@@ -131,6 +133,22 @@ export class Net {
         if (d) this._emit('powerupRemove', d.ids);
         break;
       }
+      case S2C.AUTH_RESULT: {
+        const d = decodeAuthResult(r);
+        if (d) this._emit('authResult', d);
+        break;
+      }
+      case S2C.PROFILE_DATA: {
+        const d = decodeProfileData(r);
+        if (d) this._emit('profileData', d);
+        break;
+      }
+      case S2C.HEADSHOT: {
+        const killer = r.str();
+        const victim = r.str();
+        if (killer !== undefined) this._emit('headshot', { killer, victim });
+        break;
+      }
       default: break;
     }
   }
@@ -185,6 +203,22 @@ export class Net {
     const w = new Writer();
     w.op(C2S.MULTIPLIER);
     this._send(w.toUint8());
+  }
+
+  sendLogin(username, password) {
+    this._send(encodeLogin(username, password));
+  }
+
+  sendRegister(username, password) {
+    this._send(encodeRegister(username, password));
+  }
+
+  sendAuthToken(token) {
+    this._send(encodeAuthToken(token));
+  }
+
+  sendProfileRequest() {
+    this._send(encodeProfileRequest());
   }
 }
 

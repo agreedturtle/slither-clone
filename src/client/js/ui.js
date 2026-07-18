@@ -26,6 +26,32 @@ export class Ui {
     this.skinPickerFull = document.getElementById('skinPickerFull');
     this.skinPreview = document.getElementById('skinPreview');
 
+    // Auth
+    this.loginBtn = document.getElementById('loginBtn');
+    this.profileBtn = document.getElementById('profileBtn');
+    this.loginScreen = document.getElementById('loginScreen');
+    this.authLoginTab = document.getElementById('authLoginTab');
+    this.authRegisterTab = document.getElementById('authRegisterTab');
+    this.authUsername = document.getElementById('authUsername');
+    this.authPassword = document.getElementById('authPassword');
+    this.authSubmitBtn = document.getElementById('authSubmitBtn');
+    this.authBackBtn = document.getElementById('authBackBtn');
+    this.authGuestBtn = document.getElementById('authGuestBtn');
+    this.authError = document.getElementById('authError');
+    this.authSuccess = document.getElementById('authSuccess');
+    this.authModeLabel = document.getElementById('authModeLabel');
+
+    // Profile
+    this.profileScreen = document.getElementById('profileScreen');
+    this.profileUsername = document.getElementById('profileUsername');
+    this.profileHighScore = document.getElementById('profileHighScore');
+    this.profileKills = document.getElementById('profileKills');
+    this.profileHeadshots = document.getElementById('profileHeadshots');
+    this.profileGames = document.getElementById('profileGames');
+    this.profileDeaths = document.getElementById('profileDeaths');
+    this.profileBackBtn = document.getElementById('profileBackBtn');
+    this.profileLogoutBtn = document.getElementById('profileLogoutBtn');
+
     this.selectedSkin = 0;
     this._previewFrame = 0;
     this._previewAnimId = null;
@@ -204,6 +230,60 @@ export class Ui {
     this.connecting.classList.remove('hidden');
   }
   hideConnecting() { this.connecting.classList.add('hidden'); }
+
+  // ---- Auth ----
+  showLoginScreen() {
+    this.loginScreen.classList.remove('hidden');
+    this.authError.classList.add('hidden');
+    this.authSuccess.classList.add('hidden');
+    this.authUsername.value = '';
+    this.authPassword.value = '';
+  }
+  hideLoginScreen() { this.loginScreen.classList.add('hidden'); }
+
+  showProfile() { this.profileScreen.classList.remove('hidden'); }
+  hideProfile() { this.profileScreen.classList.add('hidden'); }
+
+  setAuthMode(mode) {
+    this.authLoginTab.classList.toggle('active', mode === 'login');
+    this.authRegisterTab.classList.toggle('active', mode === 'register');
+    this.authSubmitBtn.textContent = mode === 'login' ? 'Login' : 'Register';
+    this.authModeLabel.textContent = mode === 'login' ? 'Log in to track stats' : 'Create an account';
+    this.authError.classList.add('hidden');
+    this.authSuccess.classList.add('hidden');
+  }
+
+  showAuthError(msg) {
+    this.authError.textContent = msg;
+    this.authError.classList.remove('hidden');
+    this.authSuccess.classList.add('hidden');
+  }
+
+  showAuthSuccess(msg) {
+    this.authSuccess.textContent = msg;
+    this.authSuccess.classList.remove('hidden');
+    this.authError.classList.add('hidden');
+  }
+
+  showLoggedIn(username) {
+    this.loginBtn.classList.add('hidden');
+    this.profileBtn.classList.remove('hidden');
+    this.profileBtn.textContent = username;
+  }
+
+  showLoggedOut() {
+    this.loginBtn.classList.remove('hidden');
+    this.profileBtn.classList.add('hidden');
+  }
+
+  updateProfile(d) {
+    if (this.profileUsername) this.profileUsername.textContent = d.username || '—';
+    if (this.profileHighScore) this.profileHighScore.textContent = (d.highScore || 0).toLocaleString();
+    if (this.profileKills) this.profileKills.textContent = (d.totalKills || 0).toLocaleString();
+    if (this.profileHeadshots) this.profileHeadshots.textContent = (d.headshots || 0).toLocaleString();
+    if (this.profileGames) this.profileGames.textContent = (d.gamesPlayed || 0).toLocaleString();
+    if (this.profileDeaths) this.profileDeaths.textContent = (d.deaths || 0).toLocaleString();
+  }
 }
 
 export default Ui;

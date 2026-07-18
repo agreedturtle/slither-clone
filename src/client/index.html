@@ -24,12 +24,84 @@
       <div class="menu-buttons">
         <button id="playBtn" class="btn primary">Play</button>
         <button id="skinsBtn" class="btn">Skins</button>
+        <button id="loginBtn" class="btn accent">Login</button>
+        <button id="profileBtn" class="btn accent hidden">Profile</button>
       </div>
 
       <div class="hint">
         <div><b>Mouse</b> to steer &nbsp;·&nbsp; <b>Click / Space</b> to boost</div>
         <div><b>Q</b> auto-spin &nbsp;·&nbsp; <b>G</b> low graphics</div>
         <div><b>F2</b> admin panel (password: 9123049)</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== Login / Register ===== -->
+  <div id="loginScreen" class="overlay center-overlay hidden">
+    <div class="panel">
+      <h1 class="title">Account</h1>
+      <p class="subtitle" id="authModeLabel">Log in to track stats</p>
+
+      <div class="auth-tabs">
+        <button id="authLoginTab" class="btn primary tab-btn active">Login</button>
+        <button id="authRegisterTab" class="btn tab-btn">Register</button>
+      </div>
+
+      <div id="authError" class="auth-error hidden"></div>
+      <div id="authSuccess" class="auth-success hidden"></div>
+
+      <label class="field">
+        <span>Username</span>
+        <input id="authUsername" type="text" maxlength="16" placeholder="username" autocomplete="off" />
+      </label>
+      <label class="field">
+        <span>Password</span>
+        <input id="authPassword" type="password" maxlength="64" placeholder="password" autocomplete="off" />
+      </label>
+
+      <div class="menu-buttons">
+        <button id="authSubmitBtn" class="btn primary">Login</button>
+        <button id="authBackBtn" class="btn">Back</button>
+      </div>
+
+      <div class="hint">
+        <div>Or <button id="authGuestBtn" class="link-btn">play as guest</button></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== Profile ===== -->
+  <div id="profileScreen" class="overlay center-overlay hidden">
+    <div class="panel">
+      <h1 class="title">Profile</h1>
+      <p class="subtitle" id="profileUsername">—</p>
+
+      <div class="profile-stats">
+        <div class="profile-stat">
+          <span class="stat-label">High Score</span>
+          <span id="profileHighScore" class="stat-val">0</span>
+        </div>
+        <div class="profile-stat">
+          <span class="stat-label">Total Kills</span>
+          <span id="profileKills" class="stat-val">0</span>
+        </div>
+        <div class="profile-stat">
+          <span class="stat-label">Headshots</span>
+          <span id="profileHeadshots" class="stat-val">0</span>
+        </div>
+        <div class="profile-stat">
+          <span class="stat-label">Games Played</span>
+          <span id="profileGames" class="stat-val">0</span>
+        </div>
+        <div class="profile-stat">
+          <span class="stat-label">Deaths</span>
+          <span id="profileDeaths" class="stat-val">0</span>
+        </div>
+      </div>
+
+      <div class="menu-buttons">
+        <button id="profileBackBtn" class="btn">Back</button>
+        <button id="profileLogoutBtn" class="btn danger">Logout</button>
       </div>
     </div>
   </div>
