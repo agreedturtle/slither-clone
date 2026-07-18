@@ -20,7 +20,7 @@ export class Hud {
   }
 
   _sizeMinimap() {
-    const s = 200;
+    const s = 280;
     this.minimap.width = s * this._mmDpr;
     this.minimap.height = s * this._mmDpr;
     this.mctx.setTransform(this._mmDpr, 0, 0, this._mmDpr, 0, 0);
@@ -48,7 +48,7 @@ export class Hud {
   // radar: [{id, x, y, score, angle, isMe, body}]
   drawMinimap(radar, myId) {
     const ctx = this.mctx;
-    const S = 200;
+    const S = 280;
     ctx.clearRect(0, 0, S, S);
     const cx = S / 2, cy = S / 2, rad = S / 2 - 3;
 
@@ -63,14 +63,14 @@ export class Hud {
     for (const s of radar) {
       const big = s.isMe || s.id === myId;
       const bRadius = bodyRadiusFromScore(s.score);
-      const lineW = Math.max(1, Math.min(6, bRadius * 0.06));
+      const lineW = Math.max(1.5, Math.min(8, bRadius * 0.08));
 
       if (big) {
-        ctx.strokeStyle = 'rgba(110,232,74,0.9)';
+        ctx.strokeStyle = 'rgba(110,232,74,0.95)';
       } else {
         const t = Math.min(1, s.score / 8000);
-        const base = Math.round(60 + t * 140);
-        ctx.strokeStyle = `rgba(${base - 5},${base},${base + 15},0.8)`;
+        const base = Math.round(80 + t * 160);
+        ctx.strokeStyle = `rgba(${base},${base + 5},${base + 25},0.9)`;
       }
       ctx.lineCap = 'round';
       ctx.lineJoin = 'round';
@@ -100,7 +100,7 @@ export class Hud {
         const hy = cy + s.y * scale;
         ctx.fillStyle = ctx.strokeStyle;
         ctx.beginPath();
-        ctx.arc(hx, hy, Math.max(1.5, lineW), 0, Math.PI * 2);
+        ctx.arc(hx, hy, Math.max(2, lineW), 0, Math.PI * 2);
         ctx.fill();
       }
     }
