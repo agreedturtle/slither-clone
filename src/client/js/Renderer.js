@@ -342,38 +342,18 @@ export class Renderer {
       }
     } else if (isSplit) {
       const cols = skin.split || ['#2255CC', '#E8D44D'];
-      const half = lineWidth * 0.5;
-      const perps = new Float32Array(count * 2);
-      for (let i = 0; i < count; i++) {
-        let dx, dy;
-        if (i === 0) {
-          dx = screen[2] - screen[0]; dy = screen[3] - screen[1];
-        } else if (i === count - 1) {
-          dx = screen[(count - 1) * 2] - screen[(count - 2) * 2];
-          dy = screen[(count - 1) * 2 + 1] - screen[(count - 2) * 2 + 1];
-        } else {
-          dx = screen[(i + 1) * 2] - screen[(i - 1) * 2];
-          dy = screen[(i + 1) * 2 + 1] - screen[(i - 1) * 2 + 1];
-        }
-        const len = Math.sqrt(dx * dx + dy * dy) || 1;
-        perps[i * 2] = -dy / len;
-        perps[i * 2 + 1] = dx / len;
-      }
-      for (let side = 0; side < 2; side++) {
-        const dir = side === 0 ? -1 : 1;
-        ctx.fillStyle = cols[side];
-        ctx.beginPath();
-        ctx.moveTo(screen[0], screen[1]);
-        for (let i = 1; i < count; i++) ctx.lineTo(screen[i * 2], screen[i * 2 + 1]);
-        for (let i = count - 1; i >= 0; i--) {
-          ctx.lineTo(
-            screen[i * 2] + perps[i * 2] * half * dir,
-            screen[i * 2 + 1] + perps[i * 2 + 1] * half * dir
-          );
-        }
-        ctx.closePath();
-        ctx.fill();
-      }
+      ctx.strokeStyle = cols[0];
+      ctx.lineWidth = lineWidth;
+      ctx.beginPath();
+      ctx.moveTo(screen[0], screen[1]);
+      for (let i = 1; i < count; i++) ctx.lineTo(screen[i * 2], screen[i * 2 + 1]);
+      ctx.stroke();
+      ctx.strokeStyle = cols[1];
+      ctx.lineWidth = lineWidth * 0.5;
+      ctx.beginPath();
+      ctx.moveTo(screen[0], screen[1]);
+      for (let i = 1; i < count; i++) ctx.lineTo(screen[i * 2], screen[i * 2 + 1]);
+      ctx.stroke();
     } else {
       ctx.strokeStyle = skin.main;
       ctx.lineWidth = lineWidth;

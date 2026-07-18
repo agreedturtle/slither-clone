@@ -164,28 +164,18 @@ export class Ui {
       }
     } else if (skin.main === 'split') {
       const cols = skin.split || ['#2255CC', '#E8D44D'];
-      const half = lw * 0.5;
-      const perps = [];
-      for (let i = 0; i < segs; i++) {
-        let dx, dy;
-        if (i === 0) { dx = pts[2] - pts[0]; dy = pts[3] - pts[1]; }
-        else if (i === segs - 1) { dx = pts[(segs-1)*2] - pts[(segs-2)*2]; dy = pts[(segs-1)*2+1] - pts[(segs-2)*2+1]; }
-        else { dx = pts[(i+1)*2] - pts[(i-1)*2]; dy = pts[(i+1)*2+1] - pts[(i-1)*2+1]; }
-        const len = Math.sqrt(dx*dx+dy*dy) || 1;
-        perps.push(-dy/len, dx/len);
-      }
-      for (let side = 0; side < 2; side++) {
-        const dir = side === 0 ? -1 : 1;
-        ctx.fillStyle = cols[side];
-        ctx.beginPath();
-        ctx.moveTo(pts[0], pts[1]);
-        for (let i = 1; i < segs; i++) ctx.lineTo(pts[i*2], pts[i*2+1]);
-        for (let i = segs - 1; i >= 0; i--) {
-          ctx.lineTo(pts[i*2] + perps[i*2] * half * dir, pts[i*2+1] + perps[i*2+1] * half * dir);
-        }
-        ctx.closePath();
-        ctx.fill();
-      }
+      ctx.strokeStyle = cols[0];
+      ctx.lineWidth = lw;
+      ctx.beginPath();
+      ctx.moveTo(pts[0], pts[1]);
+      for (let i = 1; i < segs; i++) ctx.lineTo(pts[i * 2], pts[i * 2 + 1]);
+      ctx.stroke();
+      ctx.strokeStyle = cols[1];
+      ctx.lineWidth = lw * 0.5;
+      ctx.beginPath();
+      ctx.moveTo(pts[0], pts[1]);
+      for (let i = 1; i < segs; i++) ctx.lineTo(pts[i * 2], pts[i * 2 + 1]);
+      ctx.stroke();
     } else {
       ctx.strokeStyle = skin.main;
       ctx.lineWidth = lw;
@@ -432,28 +422,18 @@ export class Ui {
       }
     } else if (isSplitSkin) {
       const cols = skin.split || ['#2255CC', '#E8D44D'];
-      const half = lw * 0.5;
-      const perps = [];
-      for (let i = 0; i < segs; i++) {
-        let dx, dy;
-        if (i === 0) { dx = pts[2] - pts[0]; dy = pts[3] - pts[1]; }
-        else if (i === segs - 1) { dx = pts[(segs-1)*2] - pts[(segs-2)*2]; dy = pts[(segs-1)*2+1] - pts[(segs-2)*2+1]; }
-        else { dx = pts[(i+1)*2] - pts[(i-1)*2]; dy = pts[(i+1)*2+1] - pts[(i-1)*2+1]; }
-        const len = Math.sqrt(dx*dx+dy*dy) || 1;
-        perps.push(-dy/len, dx/len);
-      }
-      for (let side = 0; side < 2; side++) {
-        const dir = side === 0 ? -1 : 1;
-        ctx.fillStyle = cols[side];
-        ctx.beginPath();
-        ctx.moveTo(pts[0], pts[1]);
-        for (let i = 1; i < segs; i++) ctx.lineTo(pts[i*2], pts[i*2+1]);
-        for (let i = segs - 1; i >= 0; i--) {
-          ctx.lineTo(pts[i*2] + perps[i*2] * half * dir, pts[i*2+1] + perps[i*2+1] * half * dir);
-        }
-        ctx.closePath();
-        ctx.fill();
-      }
+      ctx.strokeStyle = cols[0];
+      ctx.lineWidth = lw;
+      ctx.beginPath();
+      ctx.moveTo(pts[0], pts[1]);
+      for (let i = 1; i < segs; i++) ctx.lineTo(pts[i * 2], pts[i * 2 + 1]);
+      ctx.stroke();
+      ctx.strokeStyle = cols[1];
+      ctx.lineWidth = lw * 0.5;
+      ctx.beginPath();
+      ctx.moveTo(pts[0], pts[1]);
+      for (let i = 1; i < segs; i++) ctx.lineTo(pts[i * 2], pts[i * 2 + 1]);
+      ctx.stroke();
     } else {
       ctx.strokeStyle = skin.main;
       ctx.lineWidth = lw;
