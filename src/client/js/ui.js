@@ -74,14 +74,10 @@ export class Ui {
       const sw = document.createElement('div');
       sw.className = 'skin-swatch-full' + (i === this.selectedSkin ? ' selected' : '');
       const isMulti = skin.main === 'rainbow' || skin.main === 'combo';
-      const isSplit = skin.main === 'split';
       if (isMulti && skin.colors) {
         sw.style.background = `linear-gradient(135deg, ${skin.colors.join(', ')})`;
       } else if (isMulti) {
         sw.style.background = `linear-gradient(135deg, ${RAINBOW_STOPS.join(', ')})`;
-      } else if (isSplit) {
-        const cols = skin.split || ['#2255CC', '#E8D44D'];
-        sw.style.background = `linear-gradient(135deg, ${cols[0]} 50%, ${cols[1]} 50%)`;
       } else {
         sw.style.background = `radial-gradient(circle at 35% 35%, ${skin.glow}, ${skin.main} 55%, ${skin.shade})`;
       }
@@ -161,32 +157,6 @@ export class Ui {
         ctx.moveTo(pts[start * 2], pts[start * 2 + 1]);
         for (let i = start + 1; i <= end; i++) ctx.lineTo(pts[i * 2], pts[i * 2 + 1]);
         ctx.stroke();
-      }
-    } else if (skin.main === 'split') {
-      const cols = skin.split || ['#2255CC', '#E8D44D'];
-      const half = lw * 0.5;
-      const waveAmp = lw * 0.15;
-      const perps = [];
-      for (let i = 0; i < segs; i++) {
-        let dx, dy;
-        if (i === 0) { dx = pts[2] - pts[0]; dy = pts[3] - pts[1]; }
-        else if (i === segs - 1) { dx = pts[(segs-1)*2] - pts[(segs-2)*2]; dy = pts[(segs-1)*2+1] - pts[(segs-2)*2+1]; }
-        else { dx = pts[(i+1)*2] - pts[(i-1)*2]; dy = pts[(i+1)*2+1] - pts[(i-1)*2+1]; }
-        const len = Math.sqrt(dx*dx+dy*dy) || 1;
-        perps.push(-dy/len, dx/len);
-      }
-      for (let side = 0; side < 2; side++) {
-        const dir = side === 0 ? -1 : 1;
-        ctx.fillStyle = cols[side];
-        ctx.beginPath();
-        ctx.moveTo(pts[0], pts[1]);
-        for (let i = 1; i < segs; i++) ctx.lineTo(pts[i*2], pts[i*2+1]);
-        for (let i = segs - 1; i >= 0; i--) {
-          const wave = Math.sin(i * 0.12) * waveAmp;
-          ctx.lineTo(pts[i*2] + perps[i*2] * (half + wave) * dir, pts[i*2+1] + perps[i*2+1] * (half + wave) * dir);
-        }
-        ctx.closePath();
-        ctx.fill();
       }
     } else {
       ctx.strokeStyle = skin.main;
@@ -398,7 +368,6 @@ export class Ui {
     const lw = 12;
     const skin = SKINS[this.selectedSkin] || SKINS[0];
     const isMulti = skin.main === 'rainbow' || skin.main === 'combo';
-    const isSplitSkin = skin.main === 'split';
     const skinColors = skin.colors || RAINBOW_STOPS;
 
     ctx.lineJoin = 'round';
@@ -431,32 +400,6 @@ export class Ui {
         ctx.moveTo(pts[start * 2], pts[start * 2 + 1]);
         for (let i = start + 1; i <= end; i++) ctx.lineTo(pts[i * 2], pts[i * 2 + 1]);
         ctx.stroke();
-      }
-    } else if (isSplitSkin) {
-      const cols = skin.split || ['#2255CC', '#E8D44D'];
-      const half = lw * 0.5;
-      const waveAmp = lw * 0.15;
-      const perps = [];
-      for (let i = 0; i < segs; i++) {
-        let dx, dy;
-        if (i === 0) { dx = pts[2] - pts[0]; dy = pts[3] - pts[1]; }
-        else if (i === segs - 1) { dx = pts[(segs-1)*2] - pts[(segs-2)*2]; dy = pts[(segs-1)*2+1] - pts[(segs-2)*2+1]; }
-        else { dx = pts[(i+1)*2] - pts[(i-1)*2]; dy = pts[(i+1)*2+1] - pts[(i-1)*2+1]; }
-        const len = Math.sqrt(dx*dx+dy*dy) || 1;
-        perps.push(-dy/len, dx/len);
-      }
-      for (let side = 0; side < 2; side++) {
-        const dir = side === 0 ? -1 : 1;
-        ctx.fillStyle = cols[side];
-        ctx.beginPath();
-        ctx.moveTo(pts[0], pts[1]);
-        for (let i = 1; i < segs; i++) ctx.lineTo(pts[i*2], pts[i*2+1]);
-        for (let i = segs - 1; i >= 0; i--) {
-          const wave = Math.sin(i * 0.12) * waveAmp;
-          ctx.lineTo(pts[i*2] + perps[i*2] * (half + wave) * dir, pts[i*2+1] + perps[i*2+1] * (half + wave) * dir);
-        }
-        ctx.closePath();
-        ctx.fill();
       }
     } else {
       ctx.strokeStyle = skin.main;

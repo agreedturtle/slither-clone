@@ -288,7 +288,6 @@ export class Renderer {
     }
 
     const isMultiColor = !this.lowGraphics && (skin.main === 'rainbow' || skin.main === 'combo');
-    const isSplit = !this.lowGraphics && skin.main === 'split';
     const skinColors = skin.colors || RAINBOW_STOPS;
     const skinMain = this.lowGraphics ? (skin.shade || skin.main) : skin.main;
 
@@ -342,43 +341,6 @@ export class Renderer {
         ctx.moveTo(screen[start * 2], screen[start * 2 + 1]);
         for (let i = start + 1; i <= end; i++) ctx.lineTo(screen[i * 2], screen[i * 2 + 1]);
         ctx.stroke();
-      }
-    } else if (isSplit) {
-      const cols = skin.split || ['#2255CC', '#E8D44D'];
-      const half = lineWidth * 0.5;
-      const waveAmp = lineWidth * 0.15;
-      const waveFreq = 0.12;
-      const perps = new Float32Array(count * 2);
-      for (let i = 0; i < count; i++) {
-        let dx, dy;
-        if (i === 0) {
-          dx = screen[2] - screen[0]; dy = screen[3] - screen[1];
-        } else if (i === count - 1) {
-          dx = screen[(count - 1) * 2] - screen[(count - 2) * 2];
-          dy = screen[(count - 1) * 2 + 1] - screen[(count - 2) * 2 + 1];
-        } else {
-          dx = screen[(i + 1) * 2] - screen[(i - 1) * 2];
-          dy = screen[(i + 1) * 2 + 1] - screen[(i - 1) * 2 + 1];
-        }
-        const len = Math.sqrt(dx * dx + dy * dy) || 1;
-        perps[i * 2] = -dy / len;
-        perps[i * 2 + 1] = dx / len;
-      }
-      for (let side = 0; side < 2; side++) {
-        const dir = side === 0 ? -1 : 1;
-        ctx.fillStyle = cols[side];
-        ctx.beginPath();
-        ctx.moveTo(screen[0], screen[1]);
-        for (let i = 1; i < count; i++) ctx.lineTo(screen[i * 2], screen[i * 2 + 1]);
-        for (let i = count - 1; i >= 0; i--) {
-          const wave = Math.sin(i * waveFreq) * waveAmp;
-          ctx.lineTo(
-            screen[i * 2] + perps[i * 2] * (half + wave) * dir,
-            screen[i * 2 + 1] + perps[i * 2 + 1] * (half + wave) * dir
-          );
-        }
-        ctx.closePath();
-        ctx.fill();
       }
     } else {
       ctx.strokeStyle = skinMain;
