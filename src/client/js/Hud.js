@@ -26,7 +26,7 @@ export class Hud {
     this.mctx.setTransform(this._mmDpr, 0, 0, this._mmDpr, 0, 0);
   }
 
-  setScore(s) { if (this.scoreVal) this.scoreVal.textContent = Math.floor(s).toLocaleString(); }
+  setScore(s) { if (this.scoreVal) this.scoreVal.textContent = Math.min(Math.floor(s), 100_000_000_000_000).toLocaleString(); }
   setFps(f) { if (this.fpsVal) this.fpsVal.textContent = f; }
   setPing(p) { if (this.pingVal) this.pingVal.textContent = p; }
   setBoost(on) {}
@@ -36,7 +36,7 @@ export class Hud {
     let html = '';
     entries.forEach((e, i) => {
       const cls = (i + 1 === myRank) ? 'me' : '';
-      html += `<li class="${cls}"><span><span class="rank">${i + 1}</span>${escapeHtml(e.name)}</span><span>${Math.floor(e.score).toLocaleString()}</span></li>`;
+      html += `<li class="${cls}"><span><span class="rank">${i + 1}</span>${escapeHtml(e.name)}</span><span>${Math.min(Math.floor(e.score), 100_000_000_000_000).toLocaleString()}</span></li>`;
     });
     this.lbList.innerHTML = html;
     if (this.myRank) {

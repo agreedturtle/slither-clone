@@ -228,7 +228,7 @@ export class Ui {
   hideSkins() { this.skinsMenu.classList.add('hidden'); if (this._previewAnimId) { cancelAnimationFrame(this._previewAnimId); this._previewAnimId = null; } }
 
   showDeath(score, rank) {
-    if (this.deathScore) this.deathScore.textContent = Math.floor(score).toLocaleString();
+    if (this.deathScore) this.deathScore.textContent = Math.min(Math.floor(score), 100_000_000_000_000).toLocaleString();
     if (this.deathRank) this.deathRank.textContent = rank > 0 ? `#${rank}` : '—';
     this.death.classList.remove('hidden');
   }
@@ -287,7 +287,7 @@ export class Ui {
 
   updateProfile(d) {
     if (this.profileUsername) this.profileUsername.textContent = d.username || '—';
-    if (this.profileHighScore) this.profileHighScore.textContent = (d.highScore || 0).toLocaleString();
+    if (this.profileHighScore) this.profileHighScore.textContent = Math.min(d.highScore || 0, 100_000_000_000_000).toLocaleString();
     if (this.profileKills) this.profileKills.textContent = (d.totalKills || 0).toLocaleString();
     if (this.profileHeadshots) this.profileHeadshots.textContent = (d.headshots || 0).toLocaleString();
     if (this.profileGames) this.profileGames.textContent = (d.gamesPlayed || 0).toLocaleString();
@@ -313,7 +313,7 @@ export class Ui {
       const row = document.createElement('div');
       row.className = 'alltime-row' + (e.name === myName ? ' me' : '');
       const medal = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : '';
-      const val = sortBy === 'kills' ? e.totalKills.toLocaleString() : e.highScore.toLocaleString();
+      const val = sortBy === 'kills' ? e.totalKills.toLocaleString() : Math.min(e.highScore, 100_000_000_000_000).toLocaleString();
       const extra = sortBy === 'kills'
         ? `<span class="alltime-val headshots">${e.headshots || 0} HS</span>`
         : `<span class="alltime-val kills">${e.totalKills || 0} kills</span>`;
