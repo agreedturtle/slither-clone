@@ -601,10 +601,25 @@ export class Room {
     for (const player of this.players.values()) {
       if (!player.joined) continue;
       const mySnakeId = player.alive && player.snake ? player.snake.id : 0;
-      const radar = all.map(s => ({
-        id: s.id, x: s.headX, y: s.headY, score: s.score, angle: s.angle,
-        isMe: s.id === mySnakeId,
-      }));
+      const radar = all.map(s => {
+        // Sample up to 8 body points for minimap rendering
+        s.rebuildBodyIfNeeded();
+        const bodyLen = s._bodyLen;
+        const maxMiniPts = Math.min(8, bodyLen);
+        const bodyPts = [];
+        if (maxMiniPts > 1) {
+          const ratio = (bodyLen - 1) / (maxMiniPts - 1);
+          for (let i = 0; i < maxMiniPts; i++) {
+            const idx = Math.round(i * ratio);
+            bodyPts.push({ x: Math.round(s._bodyX[idx]), y: Math.round(s._bodyY[idx]) });
+          }
+        }
+        return {
+          id: s.id, x: s.headX, y: s.headY, score: s.score, angle: s.angle,
+          isMe: s.id === mySnakeId,
+          body: bodyPts,
+        };
+      });
       player.send(encodeRadar(radar));
     }
   }

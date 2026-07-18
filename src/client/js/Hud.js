@@ -2,7 +2,7 @@
 // Hud.js — DOM + minimap canvas for score, FPS, ping, leaderboard, minimap.
 // ===========================================================================
 
-import { CONFIG, bodyRadiusFromScore, scoreToPoints } from '../../shared/constants.js';
+import { CONFIG, bodyRadiusFromScore } from '../../shared/constants.js';
 
 export class Hud {
   constructor() {
@@ -45,14 +45,13 @@ export class Hud {
   }
 
   // Draw the minimap from server radar data (all alive snakes).
-  // radar: [{id, x, y, score, angle, isMe}]
+  // radar: [{id, x, y, score, angle, isMe, body}]
   drawMinimap(radar, myId) {
     const ctx = this.mctx;
     const S = 200;
     ctx.clearRect(0, 0, S, S);
     const cx = S / 2, cy = S / 2, rad = S / 2 - 3;
 
-    // dark background with subtle radial gradient
     const grad = ctx.createRadialGradient(cx, cy, 0, cx, cy, rad);
     grad.addColorStop(0, 'rgba(14,22,36,0.7)');
     grad.addColorStop(1, 'rgba(6,10,18,0.85)');
@@ -62,44 +61,44 @@ export class Hud {
     const scale = rad / CONFIG.WORLD_RADIUS;
 
     for (const s of radar) {
-      const hx = cx + s.x * scale;
-      const hy = cy + s.y * scale;
       const big = s.isMe || s.id === myId;
-
-      const pts = scoreToPoints(s.score);
       const bRadius = bodyRadiusFromScore(s.score);
-
-      // Length: map body points to minimap pixels (min 4px, max ~50px)
-      const bodyLen = Math.max(4, Math.min(50, pts * 0.025));
-      // Thickness: map body radius to minimap line width (min 1px, max 6px)
       const lineW = Math.max(1, Math.min(6, bRadius * 0.06));
-
-      const tx = hx - Math.cos(s.angle) * bodyLen;
-      const ty = hy - Math.sin(s.angle) * bodyLen;
-
-      ctx.lineCap = 'round';
-      ctx.lineWidth = lineW;
 
       if (big) {
         ctx.strokeStyle = 'rgba(110,232,74,0.9)';
       } else {
-        // Greyscale: brighter = bigger score, with slight cool tint
         const t = Math.min(1, s.score / 8000);
         const base = Math.round(60 + t * 140);
         ctx.strokeStyle = `rgba(${base - 5},${base},${base + 15},0.8)`;
       }
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+      ctx.lineWidth = lineW;
 
-      ctx.beginPath();
-      ctx.moveTo(tx, ty);
-      ctx.lineTo(hx, hy);
-      ctx.stroke();
+      const body = s.body;
+      if (body && body.length > 1) {
+        ctx.beginPath();
+        ctx.moveTo(cx + body[0].x * scale, cy + body[0].y * scale);
+        for (let i = 1; i < body.length; i++) {
+          ctx.lineTo(cx + body[i].x * scale, cy + body[i].y * scale);
+        }
+        ctx.stroke();
 
-      // head dot — sized by body radius
-      const headR = Math.max(1.5, lineW * 1.0);
-      ctx.fillStyle = ctx.strokeStyle;
-      ctx.beginPath();
-      ctx.arc(hx, hy, headR, 0, Math.PI * 2);
-      ctx.fill();
+        const headR = Math.max(1.5, lineW * 1.0);
+        ctx.fillStyle = ctx.strokeStyle;
+        ctx.beginPath();
+        ctx.arc(cx + body[0].x * scale, cy + body[0].y * scale, headR, 0, Math.PI * 2);
+        ctx.fill();
+      } else {
+        // Fallback: no body data, draw head dot only
+        const hx = cx + s.x * scale;
+        const hy = cy + s.y * scale;
+        ctx.fillStyle = ctx.strokeStyle;
+        ctx.beginPath();
+        ctx.arc(hx, hy, Math.max(1.5, lineW), 0, Math.PI * 2);
+        ctx.fill();
+      }
     }
   }
 

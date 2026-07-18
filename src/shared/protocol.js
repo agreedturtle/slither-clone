@@ -237,11 +237,18 @@ export function encodeLeaderboard(entries, myRank) {
 // Radar: every alive snake's head position + score + angle, for the minimap.
 // entries: [{ id, x, y, score, angle, isMe(boolean) }]
 export function encodeRadar(entries) {
-  const w = new Writer(8 + entries.length * 14);
+  let size = 8;
+  for (const e of entries) size += 17 + (e.body ? e.body.length * 4 : 0);
+  const w = new Writer(size);
   w.op(S2C.RADAR).u16(entries.length);
   for (const e of entries) {
     w.u32(e.id >>> 0).i16(Math.round(e.x)).i16(Math.round(e.y))
       .u32(e.score >>> 0).f32(e.angle || 0).u8(e.isMe ? 1 : 0);
+    const body = e.body || [];
+    w.u8(body.length);
+    for (const pt of body) {
+      w.i16(pt.x).i16(pt.y);
+    }
   }
   return w.toUint8();
 }
@@ -252,8 +259,13 @@ export function decodeRadar(r) {
   const items = [];
   for (let i = 0; i < count; i++) {
     const id = r.u32(), x = r.i16(), y = r.i16(), score = r.u32(), angle = r.f32(), isMe = r.u8();
+    const bodyLen = r.u8();
+    const body = [];
+    for (let j = 0; j < bodyLen; j++) {
+      body.push({ x: r.i16(), y: r.i16() });
+    }
     if (isMe === undefined) return null;
-    items.push({ id, x, y, score, angle, isMe: isMe === 1 });
+    items.push({ id, x, y, score, angle, isMe: isMe === 1, body });
   }
   return { items };
 }
