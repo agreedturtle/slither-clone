@@ -1,0 +1,9 @@
+services:
+  game:
+    build: .
+    ports:
+      - "3000:3000"
+    environment:
+      - PORT=3000
+      - ADMIN_PASSWORD=admin
+    restart: unless-stopped

@@ -1,0 +1,181 @@
+// ===========================================================================
+// Hud.js — DOM + minimap canvas for score, FPS, ping, leaderboard, minimap.
+// ===========================================================================
+
+import { CONFIG, bodyRadiusFromScore, scoreToPoints } from '../../shared/constants.js';
+
+export class Hud {
+  constructor() {
+    this.scoreVal = document.getElementById('scoreVal');
+    this.multBadge = document.getElementById('multBadge');
+    this.fpsVal = document.getElementById('fpsVal');
+    this.pingVal = document.getElementById('pingVal');
+    this.lbList = document.getElementById('leaderboardList');
+    this.myRank = document.getElementById('myRank');
+    this.minimap = document.getElementById('minimap');
+    this.mctx = this.minimap.getContext('2d');
+    this.vignette = document.getElementById('boostVignette');
+    this._mmDpr = Math.min(window.devicePixelRatio || 1, 2);
+    this._sizeMinimap();
+    window.addEventListener('resize', () => this._sizeMinimap());
+  }
+
+  _sizeMinimap() {
+    const s = 150;
+    this.minimap.width = s * this._mmDpr;
+    this.minimap.height = s * this._mmDpr;
+    this.mctx.setTransform(this._mmDpr, 0, 0, this._mmDpr, 0, 0);
+  }
+
+  setScore(s) { if (this.scoreVal) this.scoreVal.textContent = Math.floor(s).toLocaleString(); }
+  setFps(f) { if (this.fpsVal) this.fpsVal.textContent = f; }
+  setPing(p) { if (this.pingVal) this.pingVal.textContent = p; }
+  setBoost(on) {}
+
+  setLeaderboard({ entries, myRank }) {
+    if (!this.lbList) return;
+    let html = '';
+    entries.forEach((e, i) => {
+      const cls = (i + 1 === myRank) ? 'me' : '';
+      html += `<li class="${cls}"><span><span class="rank">${i + 1}</span>${escapeHtml(e.name)}</span><span>${Math.floor(e.score).toLocaleString()}</span></li>`;
+    });
+    this.lbList.innerHTML = html;
+    if (this.myRank) {
+      this.myRank.textContent = myRank > 0 ? `Your rank: #${myRank}` : '';
+    }
+  }
+
+  // Draw the minimap from server radar data (all alive snakes).
+  // radar: [{id, x, y, score, angle, isMe}]
+  drawMinimap(radar, myId) {
+    const ctx = this.mctx;
+    const S = 150;
+    ctx.clearRect(0, 0, S, S);
+    const cx = S / 2, cy = S / 2, rad = S / 2 - 3;
+
+    // dark background with subtle radial gradient
+    const grad = ctx.createRadialGradient(cx, cy, 0, cx, cy, rad);
+    grad.addColorStop(0, 'rgba(14,22,36,0.7)');
+    grad.addColorStop(1, 'rgba(6,10,18,0.85)');
+    ctx.fillStyle = grad;
+    ctx.beginPath(); ctx.arc(cx, cy, rad, 0, Math.PI * 2); ctx.fill();
+
+    const scale = rad / CONFIG.WORLD_RADIUS;
+
+    for (const s of radar) {
+      const hx = cx + s.x * scale;
+      const hy = cy + s.y * scale;
+      const big = s.isMe || s.id === myId;
+
+      // Length proportional to actual body point count (log curve for very slow growth)
+      const pts = scoreToPoints(s.score);
+      const bodyLen = Math.max(3, Math.min(22, Math.log2(pts / 12 + 1) * 2.2 + 3));
+
+      // Thickness proportional to actual body radius (log curve for very slow growth)
+      const bRadius = bodyRadiusFromScore(s.score);
+      const lineW = Math.max(1.2, Math.min(4.5, Math.log2(bRadius / 6 + 1) * 1.1 + 1.2));
+
+      const tx = hx - Math.cos(s.angle) * bodyLen;
+      const ty = hy - Math.sin(s.angle) * bodyLen;
+
+      ctx.lineCap = 'round';
+      ctx.lineWidth = lineW;
+
+      if (big) {
+        ctx.strokeStyle = 'rgba(110,232,74,0.9)';
+      } else {
+        const bright = Math.min(180, 70 + s.score / 5);
+        ctx.strokeStyle = `rgba(${bright},${bright},${bright + 20},0.75)`;
+      }
+
+      ctx.beginPath();
+      ctx.moveTo(tx, ty);
+      ctx.lineTo(hx, hy);
+      ctx.stroke();
+
+      // head dot
+      ctx.fillStyle = ctx.strokeStyle;
+      ctx.beginPath();
+      ctx.arc(hx, hy, lineW * 0.9, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+
+  // Called by Game each frame so the minimap can draw the viewport box.
+  setCameraView(viewBounds) { this._camView = viewBounds; }
+
+  // Draw multiplier info: inline badge next to length + right-side detail panel.
+  // boosters: [[mult, ticks], ...], effectiveMult: total product, magnetTicks: remaining
+  drawMultiplier(effectiveMult, boosters, magnetTicks) {
+    // Inline badge next to length
+    const hasMult = effectiveMult > 1;
+    const hasMagnet = magnetTicks > 0;
+    if (this.multBadge) {
+      if (hasMult || hasMagnet) {
+        let label = '';
+        if (hasMult) label += `${effectiveMult}x`;
+        if (hasMult && hasMagnet) label += ' ';
+        if (hasMagnet) label += 'MAG';
+        const col = hasMult ? ({ 2: '#51cf66', 5: '#ff6b6b', 10: '#ffd43b' }[effectiveMult] || '#f0c040') : '#4dabf7';
+        this.multBadge.textContent = label;
+        this.multBadge.style.background = 'rgba(0,0,0,0.45)';
+        this.multBadge.style.border = `1px solid ${col}`;
+        this.multBadge.style.color = col;
+        this.multBadge.classList.remove('hidden');
+      } else {
+        this.multBadge.classList.add('hidden');
+      }
+    }
+
+    // Right-side detail panel
+    if (!this._boostPanel) {
+      this._boostPanel = document.createElement('div');
+      this._boostPanel.style.cssText = 'position:fixed;display:flex;flex-direction:column;gap:6px;' +
+        'pointer-events:none;z-index:20;transition:opacity 0.3s ease;opacity:0;' +
+        'font-family:Inter,-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif;' +
+        'top:56px;left:200px;';
+      document.body.appendChild(this._boostPanel);
+    }
+    const BOOST_COLORS = { 2: '#6ee84a', 5: '#f87171', 10: '#fbbf24' };
+    const hasAny = (boosters && boosters.length > 0) || hasMagnet;
+    if (hasAny) {
+      let html = '';
+      if (hasMagnet) {
+        const secs = Math.ceil(magnetTicks / 20);
+        html += `<div style="background:rgba(8,14,26,0.82);border:1px solid rgba(34,211,238,0.35);border-radius:8px;` +
+          `padding:6px 14px;display:flex;align-items:center;gap:8px;white-space:nowrap;` +
+          `backdrop-filter:blur(12px);box-shadow:0 4px 16px rgba(0,0,0,0.3);">` +
+          `<span style="color:#22d3ee;font:bold 17px Inter,sans-serif;">MAG</span>` +
+          `<span style="color:#94a3b8;font:600 13px Inter,sans-serif;">${secs}s</span></div>`;
+      }
+      if (boosters) {
+        for (const [mult, ticks] of boosters) {
+          if (ticks <= 0) continue;
+          const secs = Math.ceil(ticks / 20);
+          const col = BOOST_COLORS[mult] || '#94a3b8';
+          html += `<div style="background:rgba(8,14,26,0.82);border:1px solid ${col}33;border-radius:8px;` +
+            `padding:6px 14px;display:flex;align-items:center;gap:8px;white-space:nowrap;` +
+            `backdrop-filter:blur(12px);box-shadow:0 4px 16px rgba(0,0,0,0.3);">` +
+            `<span style="color:${col};font:bold 17px Inter,sans-serif;">${mult}x</span>` +
+            `<span style="color:#94a3b8;font:600 13px Inter,sans-serif;">${secs}s</span></div>`;
+        }
+      }
+      if (effectiveMult > 1) {
+        html += `<div style="text-align:center;font:bold 20px/1.3 Inter,sans-serif;color:#fff;` +
+          `text-shadow:0 2px 8px rgba(0,0,0,0.6);">Total: ${effectiveMult}x</div>`;
+      }
+      this._boostPanel.innerHTML = html;
+      this._boostPanel.style.opacity = '1';
+    } else {
+      this._boostPanel.style.opacity = '0';
+    }
+  }
+}
+
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"']/g, (c) => ({
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+  }[c]));
+}
+
+export default Hud;

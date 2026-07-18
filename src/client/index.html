@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Slither Clone</title>
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+  <!-- Game canvas (always present; menu overlays on top) -->
+  <canvas id="game"></canvas>
+
+  <!-- ===== Start menu ===== -->
+  <div id="menu" class="overlay center-overlay">
+    <div class="panel">
+      <h1 class="title">slither<span>.clone</span></h1>
+      <p class="subtitle">a slither.io–style game</p>
+
+      <label class="field">
+        <span>Nickname</span>
+        <input id="nameInput" type="text" maxlength="16" placeholder="enter a name" autocomplete="off" />
+      </label>
+
+      <div class="menu-buttons">
+        <button id="playBtn" class="btn primary">Play</button>
+        <button id="skinsBtn" class="btn">Skins</button>
+      </div>
+
+      <div class="hint">
+        <div><b>Mouse</b> to steer &nbsp;·&nbsp; <b>Click / Space</b> to boost</div>
+        <div><b>Q</b> auto-spin &nbsp;·&nbsp; <b>G</b> low graphics</div>
+        <div><b>F2</b> admin panel (password: admin)</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== Skins menu ===== -->
+  <div id="skinsMenu" class="overlay center-overlay hidden">
+    <div class="panel">
+      <h1 class="title">skins</h1>
+      <p class="subtitle">choose your look</p>
+      <canvas id="skinPreview" width="240" height="100"></canvas>
+      <div id="skinPickerFull" class="skin-picker-full"></div>
+      <button id="skinsBackBtn" class="btn">Back</button>
+    </div>
+  </div>
+
+  <!-- ===== Death screen ===== -->
+  <div id="death" class="overlay center-overlay hidden">
+    <div class="death-red-flash"></div>
+    <div class="panel death-panel">
+      <h1 class="title dead">you died</h1>
+      <div class="death-stats">
+        <div><span class="stat-label">Length</span><span id="deathScore" class="stat-val death-val">0</span></div>
+        <div><span class="stat-label">Rank</span><span id="deathRank" class="stat-val death-val">—</span></div>
+      </div>
+      <div class="death-buttons">
+        <button id="respawnBtn" class="btn primary death-btn-yellow">Play Again</button>
+        <button id="menuBtn" class="btn death-btn-menu">Main Menu</button>
+      </div>
+      <div class="hint">press <b>Enter</b> to respawn</div>
+    </div>
+  </div>
+
+  <!-- ===== Connecting banner ===== -->
+  <div id="connecting" class="overlay banner hidden">
+    <div class="panel small">Connecting to server…</div>
+  </div>
+
+  <!-- ===== HUD ===== -->
+  <div id="hud" class="hidden">
+    <div id="topLeft">
+      <div id="scoreBox" class="hud-box"><span class="hud-label">Length</span><span id="scoreVal">0</span></div>
+      <div id="fpsBox" class="hud-box small"><span id="fpsVal">60</span> fps · <span id="pingVal">—</span> ms</div>
+    </div>
+    <div id="leaderboard" class="hud-box">
+      <div class="hud-label">Leaderboard</div>
+      <ol id="leaderboardList"></ol>
+      <div id="myRank" class="my-rank"></div>
+    </div>
+    <canvas id="minimap"></canvas>
+    <div id="boostVignette" class="hidden"></div>
+    <button id="boostBtn" class="touch-boost hidden">BOOST</button>
+  </div>
+
+  <!-- ===== Admin Panel (F2) ===== -->
+  <div id="adminPanel" class="admin-panel hidden">
+    <div class="admin-header">
+      <span class="admin-title">Admin Panel</span>
+      <span class="admin-hint">F2 to close</span>
+    </div>
+    <label class="admin-field">
+      <span>Password</span>
+      <input id="adminPassword" type="password" value="admin" />
+    </label>
+    <div class="admin-section">
+      <span class="admin-section-title">Mass</span>
+      <div class="admin-row">
+        <input id="adminMassAmt" type="number" value="100" />
+        <button class="admin-btn" data-cmd="GIVE_MASS_SELF">Give Self</button>
+        <button class="admin-btn" data-cmd="GIVE_MASS_ALL">Give All</button>
+      </div>
+    </div>
+    <div class="admin-section">
+      <span class="admin-section-title">Bots</span>
+      <div class="admin-row">
+        <input id="adminBotCount" type="number" value="5" />
+        <input id="adminBotMass" type="number" value="0" />
+        <button class="admin-btn" data-cmd="SPAWN_BOTS_MASS">Spawn</button>
+      </div>
+      <div class="admin-row">
+        <input id="adminBotTarget" type="number" value="28" />
+        <button class="admin-btn" data-cmd="SET_BOT_TARGET">Set Target</button>
+      </div>
+    </div>
+    <div class="admin-section">
+      <span class="admin-section-title">Self</span>
+      <div class="admin-row">
+        <button class="admin-btn accent" data-cmd="GOD_MODE">God Mode</button>
+        <button class="admin-btn" data-cmd="SHRINK">Shrink (0)</button>
+      </div>
+      <div class="admin-row">
+        <input id="adminShrinkScore" type="number" value="0" />
+        <button class="admin-btn" data-cmd="SHRINK_CUSTOM">Set Score</button>
+      </div>
+      <div class="admin-row">
+        <select id="adminMultVal">
+          <option value="2">2x (60s)</option>
+          <option value="5">5x (35s)</option>
+          <option value="10">10x (20s)</option>
+        </select>
+        <button class="admin-btn accent" data-cmd="GIVE_MULTIPLIER">Give Multiplier</button>
+        <button class="admin-btn accent" data-cmd="GIVE_MAGNET">Give Magnet (40s)</button>
+      </div>
+    </div>
+    <div class="admin-section">
+      <span class="admin-section-title">World</span>
+      <div class="admin-row">
+        <button class="admin-btn danger" data-cmd="KILL_ALL">Kill All</button>
+        <button class="admin-btn" data-cmd="CLEAR_FOOD">Clear Food</button>
+        <button class="admin-btn" data-cmd="REFILL_FOOD">Refill Food</button>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="js/main.js"></script>
+</body>
+</html>

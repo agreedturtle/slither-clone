@@ -1,0 +1,15 @@
+{
+  "name": "slither-clone",
+  "version": "1.0.0",
+  "description": "A Slither.io clone — authoritative Node + WebSocket server with a Canvas client and AI bots.",
+  "type": "module",
+  "main": "src/server/server.js",
+  "scripts": {
+    "start": "node src/server/server.js"
+  },
+  "keywords": ["slither", "io", "game", "multiplayer", "websocket", "canvas"],
+  "license": "MIT",
+  "dependencies": {
+    "ws": "^8.18.0"
+  }
+}
