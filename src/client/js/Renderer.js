@@ -341,20 +341,34 @@ export class Renderer {
         ctx.stroke();
       }
     } else if (isSplit) {
-      // Sideways split: full body in split[0], centered stripe in split[1].
+      // Sideways split: two wavy half-stripes, offset perpendicular to the body.
       const cols = skin.split || ['#2255CC', '#E8D44D'];
-      ctx.strokeStyle = cols[0];
-      ctx.lineWidth = lineWidth;
-      ctx.beginPath();
-      ctx.moveTo(screen[0], screen[1]);
-      for (let i = 1; i < count; i++) ctx.lineTo(screen[i * 2], screen[i * 2 + 1]);
-      ctx.stroke();
-      ctx.strokeStyle = cols[1];
-      ctx.lineWidth = lineWidth * 0.5;
-      ctx.beginPath();
-      ctx.moveTo(screen[0], screen[1]);
-      for (let i = 1; i < count; i++) ctx.lineTo(screen[i * 2], screen[i * 2 + 1]);
-      ctx.stroke();
+      const half = lineWidth * 0.5;
+      const offsets = [-1, 1];
+      for (let side = 0; side < 2; side++) {
+        const off = offsets[side];
+        ctx.strokeStyle = cols[side];
+        ctx.lineWidth = half;
+        ctx.beginPath();
+        for (let i = 0; i < count; i++) {
+          const px = screen[i * 2], py = screen[i * 2 + 1];
+          let nx, ny;
+          if (i === 0) {
+            nx = screen[2] - px; ny = screen[3] - py;
+          } else if (i === count - 1) {
+            nx = px - screen[(i - 1) * 2]; ny = py - screen[(i - 1) * 2 + 1];
+          } else {
+            nx = screen[(i + 1) * 2] - screen[(i - 1) * 2];
+            ny = screen[(i + 1) * 2 + 1] - screen[(i - 1) * 2 + 1];
+          }
+          const len = Math.sqrt(nx * nx + ny * ny) || 1;
+          const perpX = -ny / len * half * 0.5 * off;
+          const perpY = nx / len * half * 0.5 * off;
+          if (i === 0) ctx.moveTo(px + perpX, py + perpY);
+          else ctx.lineTo(px + perpX, py + perpY);
+        }
+        ctx.stroke();
+      }
     } else {
       ctx.strokeStyle = skin.main;
       ctx.lineWidth = lineWidth;
