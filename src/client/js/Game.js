@@ -241,7 +241,7 @@ export class Game {
     } else if (meNow && meNow.renderPts.length >= 2) {
       this.camera.follow(meNow.renderPts[0], meNow.renderPts[1]);
       let zoom = zoomFromScore(meNow.score);
-      if (meNow.zoomTicks > 0) zoom *= 2;
+      if (meNow.zoomTicks > 0) zoom *= 0.5;
       this.camera.setZoom(zoom);
       this.hud.setBoost(meNow.boosting);
     }
