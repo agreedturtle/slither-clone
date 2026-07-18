@@ -393,7 +393,7 @@ export class Renderer {
     // Head: a slightly bigger filled circle + eyes.
     const hx = screen[0], hy = screen[1];
 
-    ctx.fillStyle = skin.glow;
+    ctx.fillStyle = skin.head || skin.glow;
     ctx.beginPath();
     ctx.arc(hx, hy, bodyR, 0, Math.PI * 2);
     ctx.fill();

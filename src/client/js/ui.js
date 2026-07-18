@@ -180,7 +180,7 @@ export class Ui {
     // Head
     const hx = pts[0], hy = pts[1];
     const headR = lw / 2 + 1;
-    ctx.fillStyle = isMulti ? '#fff' : skin.glow;
+    ctx.fillStyle = isMulti ? '#fff' : (skin.head || skin.glow);
     ctx.beginPath();
     ctx.arc(hx, hy, headR, 0, Math.PI * 2);
     ctx.fill();
@@ -414,7 +414,7 @@ export class Ui {
     // Head
     const hx = pts[0], hy = pts[1];
     const headR = lw / 2 + 1;
-    ctx.fillStyle = skin.glow;
+    ctx.fillStyle = skin.head || skin.glow;
     ctx.beginPath();
     ctx.arc(hx, hy, headR, 0, Math.PI * 2);
     ctx.fill();
