@@ -121,15 +121,6 @@ net.on('profileData', (d) => {
 
 
 
-net.on('chat', (d) => {
-  killFeed.addChat(d.senderName, d.message);
-});
-
-// ---- Chat ----
-killFeed.onSend((msg) => {
-  net.sendChat(msg);
-});
-
 // ---- Button wiring ----
 ui.playBtn.addEventListener('click', () => {
   if (!net.connected) return;
@@ -192,15 +183,11 @@ if (ui.boostBtn) {
 
 // ---- Keyboard ----
 window.addEventListener('keydown', (e) => {
-  // Enter: open chat if in game, play from menu, or respawn from death.
+  // Enter: play from menu or respawn from death.
   if (e.code === 'Enter') {
-    if (killFeed.chatOpen) return; // let chat handle it
     if (hud && !hud.el.classList.contains('hidden') && !ui.death.classList.contains('hidden')) {
       // dead — respawn
-    } else if (hud && !hud.el.classList.contains('hidden')) {
-      e.preventDefault();
-      killFeed.openChat();
-      return;
+      game.respawn();
     } else if (!ui.menu.classList.contains('hidden') && net.connected) {
       game.join(ui.getName(), ui.getSkin());
     } else if (!ui.death.classList.contains('hidden')) {

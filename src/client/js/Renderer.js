@@ -145,16 +145,15 @@ export class Renderer {
     const pulse = 1 + Math.sin(this._frame * 0.08) * 0.06; // gentle global pulse
 
     if (this.lowGraphics) {
-      // Simplified: draw plain circles, skip off-screen, skip every other food
+      // Only draw dead food (colorIdx >= FOOD_COLORS.length), skip normal food
       const vb = cam.viewBounds();
       const pad = 20;
-      let fi = 0;
       for (const f of state.food.values()) {
+        if (f.colorIdx < FOOD_COLORS.length) continue; // skip normal food
         if (f.x < vb.minX - pad || f.x > vb.maxX + pad || f.y < vb.minY - pad || f.y > vb.maxY + pad) continue;
-        if (++fi & 1) continue; // skip every other food for perf
         const p = cam.worldToScreen(f.x, f.y);
         const r = Math.max(2, (f.size / 5) * 5 * scale);
-        ctx.fillStyle = FOOD_COLORS[f.colorIdx] || FOOD_DEATH_COLOR;
+        ctx.fillStyle = FOOD_DEATH_COLOR;
         ctx.beginPath();
         ctx.arc(p.x, p.y, r, 0, Math.PI * 2);
         ctx.fill();
