@@ -121,10 +121,10 @@ export class Game {
       };
       this.state.snakes.set(s.id, entry);
     }
-    // Remove snakes not in this snapshot (left view or died) except keep my own
-    // briefly so rendering doesn't pop.
+    // Remove snakes not in this snapshot (left view or died).
+    // Keep dead player's snake briefly but mark it as gone.
     for (const id of Array.from(this.state.snakes.keys())) {
-      if (!seen.has(id) && id !== this.state.myId) this.state.snakes.delete(id);
+      if (!seen.has(id)) this.state.snakes.delete(id);
     }
 
     // Update my own score/alive flag.
@@ -201,7 +201,6 @@ export class Game {
     // 2) Interpolate body points between previous and next snapshot positions.
     //    This eliminates jitter from integer-quantized server coordinates.
     const tickMs = 1000 / CONFIG.TICK_HZ; // 50ms at 20Hz
-    const me = this.state.snakes.get(this.state.myId);
     for (const s of this.state.snakes.values()) {
       const rp = s.renderPts;
       const pp = s.prevPts;
@@ -221,10 +220,11 @@ export class Game {
 
     // 3) Camera follows MY smoothed head (or freezes at death position).
     this.camera.setDt(dt);
-    if (me && me.renderPts.length >= 2) {
-      this.camera.follow(me.renderPts[0], me.renderPts[1]);
-      this.camera.setZoom(zoomFromScore(me.score));
-      this.hud.setBoost(me.boosting);
+    const meNow = this.state.snakes.get(this.state.myId);
+    if (this.state.alive && meNow && meNow.renderPts.length >= 2) {
+      this.camera.follow(meNow.renderPts[0], meNow.renderPts[1]);
+      this.camera.setZoom(zoomFromScore(meNow.score));
+      this.hud.setBoost(meNow.boosting);
     } else if (!this.state.alive && this._deathPos) {
       // Dead — hold camera at the death spot so the world stays visible.
       this.camera.follow(this._deathPos.x, this._deathPos.y);
