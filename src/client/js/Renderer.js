@@ -63,7 +63,7 @@ export class Renderer {
     }
   }
 
-  draw(state, cam) {
+  draw(state, cam, deathAlpha, eatParticles) {
     const ctx = this.ctx;
     const W = this.canvas.clientWidth;
     const H = this.canvas.clientHeight;
@@ -79,6 +79,35 @@ export class Renderer {
     this._drawPowerups(ctx, state, cam);
     this._drawSnakes(ctx, state, cam);
     this._drawVignette(ctx, W, H);
+
+    // Eat particles — food flying toward the player's head.
+    if (eatParticles && eatParticles.length) {
+      const scale = cam.zoom;
+      const halfW = W * 0.5, halfH = H * 0.5;
+      const camX = cam.x, camY = cam.y;
+      const nowMs = performance.now();
+      const colors = FOOD_COLORS;
+      for (const p of eatParticles) {
+        const t = Math.min((nowMs - p.born) / p.dur, 1);
+        const alpha = 1 - t * t;
+        const px = (p.x - camX) * scale + halfW;
+        const py = (p.y - camY) * scale + halfH;
+        const r = Math.max(1.5, 4 * scale * (1 - t));
+        const col = p.colorIdx < colors.length ? colors[p.colorIdx] : '#fff';
+        ctx.globalAlpha = alpha;
+        ctx.fillStyle = col;
+        ctx.beginPath();
+        ctx.arc(px, py, r, 0, 6.2832);
+        ctx.fill();
+      }
+      ctx.globalAlpha = 1;
+    }
+
+    // Death fade overlay.
+    if (deathAlpha > 0.005) {
+      ctx.fillStyle = `rgba(0,0,0,${deathAlpha})`;
+      ctx.fillRect(0, 0, W, H);
+    }
 
     this._frame++;
   }

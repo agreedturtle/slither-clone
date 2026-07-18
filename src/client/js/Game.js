@@ -48,6 +48,9 @@ export class Game {
     this._deathScore = 0;
     this._deathRank = 0;
     this._deathScreenShown = false;
+    this._deathAlpha = 0;      // 0..0.7 fade overlay
+
+    this._eatParticles = [];   // { x, y, tx, ty, colorIdx, born, dur }
 
     this._bindNet();
   }
@@ -78,6 +81,7 @@ export class Game {
     this.state.alive = true;
     this._deathPos = null;
     this._deathScreenShown = false;
+    this._deathAlpha = 0;
     this.ui.hideMenu();
     this.ui.hideDeath();
     this.ui.showHud();
@@ -138,10 +142,14 @@ export class Game {
       }
     }
 
-    // Remove snakes not in this snapshot.
-    const myId = this.state.myId;
-    for (const [id, s] of this.state.snakes) {
-      if (!s._seen && id !== myId) this.state.snakes.delete(id);
+    // Remove snakes not in this snapshot (only when alive — when dead the
+    // server centers snapshots at world origin so many snakes fall outside the
+    // view and would be incorrectly purged).
+    if (this.state.alive) {
+      const myId = this.state.myId;
+      for (const [id, s] of this.state.snakes) {
+        if (!s._seen && id !== myId) this.state.snakes.delete(id);
+      }
     }
 
     // Update my own score/alive flag.
@@ -166,6 +174,18 @@ export class Game {
   }
 
   _onFoodRemove(ids) {
+    // Capture food position for eat animation before deleting.
+    if (this.state.alive) {
+      for (const id of ids) {
+        const f = this.state.food.get(id);
+        if (f) {
+          this._eatParticles.push({
+            x: f.x, y: f.y, tx: 0, ty: 0,
+            colorIdx: f.colorIdx, born: performance.now(), dur: 280,
+          });
+        }
+      }
+    }
     for (const id of ids) this.state.food.delete(id);
   }
 
@@ -242,6 +262,10 @@ export class Game {
     if (!this.state.alive && this._deathPos) {
       // Dead — hold camera at the death spot so the world stays visible.
       this.camera.follow(this._deathPos.x, this._deathPos.y);
+      // Advance death fade (0 -> 0.7 over 2 seconds).
+      if (this._deathAlpha < 0.7) {
+        this._deathAlpha = Math.min(0.7, this._deathAlpha + dt * 0.00035);
+      }
       // Show death screen after 3-second delay.
       if (!this._deathScreenShown && performance.now() - this._deathTime >= 3000) {
         this._deathScreenShown = true;
@@ -256,8 +280,23 @@ export class Game {
     }
     // else: snake not yet in map (brief moment after join), keep camera where it is.
 
-    // 4) Render.
-    this.renderer.draw(this.state, this.camera);
+    // 4) Advance eat particles (fly toward my head, then vanish).
+    const meNow = this.state.snakes.get(this.state.myId);
+    const headX = meNow && meNow.renderPts ? meNow.renderPts[0] : 0;
+    const headY = meNow && meNow.renderPts ? meNow.renderPts[1] : 0;
+    const nowMs = performance.now();
+    const ep = this._eatParticles;
+    for (let i = ep.length - 1; i >= 0; i--) {
+      const p = ep[i];
+      p.tx = headX; p.ty = headY;
+      const t = Math.min((nowMs - p.born) / p.dur, 1);
+      if (t >= 1) { ep.splice(i, 1); continue; }
+      p.x = p.x + (p.tx - p.x) * (t * t * 3); // ease-in
+      p.y = p.y + (p.ty - p.y) * (t * t * 3);
+    }
+
+    // 5) Render.
+    this.renderer.draw(this.state, this.camera, this._deathAlpha, this._eatParticles);
     this.hud.setCameraView(this.camera.viewBounds());
     this.hud.drawMinimap(this.state.radar, this.state.myId);
     this.hud.drawMultiplier(this.state.multiplier, this.state.boosters, this.state.magnetTicks, this.state.speedTicks, this.state.zoomTicks);
