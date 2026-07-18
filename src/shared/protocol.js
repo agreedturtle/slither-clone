@@ -108,6 +108,7 @@ export class Writer {
   u32(v) { this._ensure(4); this.view.setUint32(this.len, v >>> 0, true); this.len += 4; return this; }
   i32(v) { this._ensure(4); this.view.setInt32(this.len, v | 0, true); this.len += 4; return this; }
   f32(v) { this._ensure(4); this.view.setFloat32(this.len, Number(v) || 0, true); this.len += 4; return this; }
+  f64(v) { this._ensure(8); this.view.setFloat64(this.len, Number(v) || 0, true); this.len += 8; return this; }
   i16(v) { this._ensure(2); this.view.setInt16(this.len, v | 0, true); this.len += 2; return this; }
 
   str(s) {
@@ -165,6 +166,7 @@ export class Reader {
   u32() { if (!this._ok(4)) return undefined; const v = this.view.getUint32(this.len, true); this.len += 4; return v; }
   i32() { if (!this._ok(4)) return undefined; const v = this.view.getInt32(this.len, true); this.len += 4; return v; }
   f32() { if (!this._ok(4)) return undefined; const v = this.view.getFloat32(this.len, true); this.len += 4; return v; }
+  f64() { if (!this._ok(8)) return undefined; const v = this.view.getFloat64(this.len, true); this.len += 8; return v; }
   i16() { if (!this._ok(2)) return undefined; const v = this.view.getInt16(this.len, true); this.len += 2; return v; }
 
   str() {
@@ -221,7 +223,7 @@ export function encodeError(msg) {
 
 export function encodeDeath(finalScore, finalRank, killerId) {
   const w = new Writer(16);
-  return w.op(S2C.DEATH).u32(finalScore).u16(finalRank).u32(killerId >>> 0).toUint8();
+  return w.op(S2C.DEATH).f64(finalScore).u16(finalRank).u32(killerId >>> 0).toUint8();
 }
 
 export function encodeRemoveSnake(id) {
@@ -233,7 +235,7 @@ export function encodeRemoveSnake(id) {
 export function encodeLeaderboard(entries, myRank) {
   const w = new Writer(256);
   w.op(S2C.LEADERBOARD).u16(myRank >>> 0).u8(entries.length);
-  for (const e of entries) w.str(e.name).u32(e.score >>> 0);
+  for (const e of entries) w.str(e.name).f64(e.score);
   return w.toUint8();
 }
 
@@ -246,7 +248,7 @@ export function encodeRadar(entries) {
   w.op(S2C.RADAR).u16(entries.length);
   for (const e of entries) {
     w.u32(e.id >>> 0).i16(Math.round(e.x)).i16(Math.round(e.y))
-      .u32(e.score >>> 0).f32(e.angle || 0).u8(e.isMe ? 1 : 0);
+      .f64(e.score).f32(e.angle || 0).u8(e.isMe ? 1 : 0);
     const body = e.body || [];
     w.u8(body.length);
     for (const pt of body) {
@@ -261,7 +263,7 @@ export function decodeRadar(r) {
   if (count === undefined) return null;
   const items = [];
   for (let i = 0; i < count; i++) {
-    const id = r.u32(), x = r.i16(), y = r.i16(), score = r.u32(), angle = r.f32(), isMe = r.u8();
+    const id = r.u32(), x = r.i16(), y = r.i16(), score = r.f64(), angle = r.f32(), isMe = r.u8();
     const bodyLen = r.u8();
     const body = [];
     for (let j = 0; j < bodyLen; j++) {
@@ -305,7 +307,7 @@ export function encodeSnapshot(tick, snakes) {
     w.u32(s.id >>> 0);
     w.u8(s.skin);
     w.u8((s.boosting ? 1 : 0) | ((s.invuln ? 1 : 0) << 1));
-    w.u32(s.score >>> 0);
+    w.f64(s.score);
     w.str(s.name);
     w.u16(s.effectiveMultiplier || 1);
     w.u16(s.magnetTicks || 0);
@@ -338,7 +340,7 @@ export function decodeSnapshot(r) {
     const id = r.u32();
     const skin = r.u8();
     const flags = r.u8();
-    const score = r.u32();
+    const score = r.f64();
     const name = r.str();
     const effectiveMultiplier = r.u16();
     const magnetTicks = r.u16();
@@ -415,7 +417,7 @@ export function decodeLeaderboard(r) {
   const entries = [];
   for (let i = 0; i < n; i++) {
     const name = r.str();
-    const score = r.u32();
+    const score = r.f64();
     if (score === undefined) return null;
     entries.push({ name, score });
   }
@@ -423,7 +425,7 @@ export function decodeLeaderboard(r) {
 }
 
 export function decodeDeath(r) {
-  const finalScore = r.u32();
+  const finalScore = r.f64();
   const finalRank = r.u16();
   const killerId = r.u32();
   if (killerId === undefined) return null;
@@ -587,7 +589,7 @@ export function encodeProfileData(stats) {
   const w = new Writer(128);
   w.op(S2C.PROFILE_DATA)
     .str(stats.username)
-    .u32(stats.highScore >>> 0)
+    .f64(stats.highScore)
     .u16(Math.min(stats.totalKills, 65535))
     .u16(Math.min(stats.headshots, 65535))
     .u16(Math.min(stats.gamesPlayed, 65535))
@@ -643,7 +645,7 @@ export function encodeLeaderboardAlltime(entries) {
   const w = new Writer(8 + entries.length * 60);
   w.op(S2C.LEADERBOARD_ALLTIME).u16(entries.length);
   for (const e of entries) {
-    w.str(e.name).u32(e.highScore >>> 0).u16(Math.min(e.totalKills, 65535)).u16(Math.min(e.headshots || 0, 65535));
+    w.str(e.name).f64(e.highScore).u16(Math.min(e.totalKills, 65535)).u16(Math.min(e.headshots || 0, 65535));
   }
   return w.toUint8();
 }
@@ -654,7 +656,7 @@ export function decodeLeaderboardAlltime(r) {
   const entries = [];
   for (let i = 0; i < count; i++) {
     const name = r.str();
-    const highScore = r.u32();
+  const highScore = r.f64();
     const totalKills = r.u16();
     const headshots = r.u16();
     if (highScore === undefined) return null;

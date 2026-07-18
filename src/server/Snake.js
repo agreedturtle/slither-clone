@@ -157,7 +157,7 @@ export class Snake {
 
   // Add score (from eating food). Body length catches up on next rebuild.
   addScore(amount) {
-    this.score = Math.min(this.score + amount, 0xFFFFFFFF);
+    this.score = Math.min(this.score + amount, 100_000_000_000_000);
     this._bodyDirty = true;
   }
 
