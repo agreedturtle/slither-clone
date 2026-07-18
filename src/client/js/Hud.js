@@ -78,18 +78,22 @@ export class Hud {
 
       const body = s.body;
       if (body && body.length > 1) {
+        const bx0 = cx + body[0].x * scale;
+        const by0 = cy + body[0].y * scale;
         ctx.beginPath();
-        ctx.moveTo(cx + body[0].x * scale, cy + body[0].y * scale);
-        for (let i = 1; i < body.length; i++) {
-          ctx.lineTo(cx + body[i].x * scale, cy + body[i].y * scale);
+        ctx.moveTo(bx0, by0);
+        if (body.length === 2) {
+          ctx.lineTo(cx + body[1].x * scale, cy + body[1].y * scale);
+        } else {
+          for (let i = 1; i < body.length - 1; i++) {
+            const mx = (cx + body[i].x * scale + cx + body[i + 1].x * scale) / 2;
+            const my = (cy + body[i].y * scale + cy + body[i + 1].y * scale) / 2;
+            ctx.quadraticCurveTo(cx + body[i].x * scale, cy + body[i].y * scale, mx, my);
+          }
+          const last = body[body.length - 1];
+          ctx.lineTo(cx + last.x * scale, cy + last.y * scale);
         }
         ctx.stroke();
-
-        const headR = Math.max(1.5, lineW * 1.0);
-        ctx.fillStyle = ctx.strokeStyle;
-        ctx.beginPath();
-        ctx.arc(cx + body[0].x * scale, cy + body[0].y * scale, headR, 0, Math.PI * 2);
-        ctx.fill();
       } else {
         // Fallback: no body data, draw head dot only
         const hx = cx + s.x * scale;
