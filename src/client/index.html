@@ -138,7 +138,7 @@
     <div class="panel death-panel">
       <h1 class="title dead">you died</h1>
       <div class="death-stats">
-        <div><span class="stat-label">Length</span><span id="deathScore" class="stat-val death-val">0</span></div>
+        <div><span class="stat-label">Mass</span><span id="deathScore" class="stat-val death-val">0</span></div>
         <div><span class="stat-label">Rank</span><span id="deathRank" class="stat-val death-val">—</span></div>
       </div>
       <div class="death-buttons">
@@ -157,7 +157,7 @@
   <!-- ===== HUD ===== -->
   <div id="hud" class="hidden">
     <div id="topLeft">
-      <div id="scoreBox" class="hud-box"><span class="hud-label">Length</span><span id="scoreVal">0</span></div>
+      <div id="scoreBox" class="hud-box"><span class="hud-label">Mass</span><span id="scoreVal">0</span></div>
       <div id="fpsBox" class="hud-box small"><span id="fpsVal">60</span> fps · <span id="pingVal">—</span> ms</div>
     </div>
     <div id="leaderboard" class="hud-box">
@@ -165,13 +165,11 @@
       <ol id="leaderboardList"></ol>
       <div id="myRank" class="my-rank"></div>
     </div>
-    <div id="killFeed"></div>
     <div id="chatBox" class="hidden">
       <div id="chatMessages"></div>
       <input id="chatInput" type="text" maxlength="80" placeholder="Press Enter to chat..." autocomplete="off" />
     </div>
     <div id="chatStarter">Press Enter to chat</div>
-    <div id="killStreak" class="hidden"></div>
     <canvas id="minimap"></canvas>
     <div id="boostVignette" class="hidden"></div>
     <button id="boostBtn" class="touch-boost hidden">BOOST</button>

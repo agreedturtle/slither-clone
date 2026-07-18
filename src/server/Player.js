@@ -50,6 +50,7 @@ export class Player {
       y: pos.y,
       angle,
     });
+    this.snake.addScore(10);
     this.snake.playerRef = this;
     this.alive = true;
     this.room.addSnake(this.snake);

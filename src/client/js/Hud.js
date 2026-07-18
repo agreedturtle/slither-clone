@@ -7,7 +7,6 @@ import { CONFIG, bodyRadiusFromScore, scoreToPoints } from '../../shared/constan
 export class Hud {
   constructor() {
     this.scoreVal = document.getElementById('scoreVal');
-    this.multBadge = document.getElementById('multBadge');
     this.fpsVal = document.getElementById('fpsVal');
     this.pingVal = document.getElementById('pingVal');
     this.lbList = document.getElementById('leaderboardList');
@@ -107,25 +106,8 @@ export class Hud {
   // Draw multiplier info: inline badge next to length + right-side detail panel.
   // boosters: [[mult, ticks], ...], effectiveMult: total product, magnetTicks: remaining
   drawMultiplier(effectiveMult, boosters, magnetTicks) {
-    // Inline badge next to length
     const hasMult = effectiveMult > 1;
     const hasMagnet = magnetTicks > 0;
-    if (this.multBadge) {
-      if (hasMult || hasMagnet) {
-        let label = '';
-        if (hasMult) label += `${effectiveMult}x`;
-        if (hasMult && hasMagnet) label += ' ';
-        if (hasMagnet) label += 'MAG';
-        const col = hasMult ? ({ 2: '#51cf66', 5: '#ff6b6b', 10: '#ffd43b' }[effectiveMult] || '#f0c040') : '#4dabf7';
-        this.multBadge.textContent = label;
-        this.multBadge.style.background = 'rgba(0,0,0,0.45)';
-        this.multBadge.style.border = `1px solid ${col}`;
-        this.multBadge.style.color = col;
-        this.multBadge.classList.remove('hidden');
-      } else {
-        this.multBadge.classList.add('hidden');
-      }
-    }
 
     // Right-side detail panel
     if (!this._boostPanel) {
@@ -159,10 +141,6 @@ export class Hud {
             `<span style="color:${col};font:bold 17px Inter,sans-serif;">${mult}x</span>` +
             `<span style="color:#94a3b8;font:600 13px Inter,sans-serif;">${secs}s</span></div>`;
         }
-      }
-      if (effectiveMult > 1) {
-        html += `<div style="text-align:center;font:bold 20px/1.3 Inter,sans-serif;color:#fff;` +
-          `text-shadow:0 2px 8px rgba(0,0,0,0.6);">Total: ${effectiveMult}x</div>`;
       }
       this._boostPanel.innerHTML = html;
       this._boostPanel.style.opacity = '1';

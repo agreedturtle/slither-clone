@@ -15,17 +15,6 @@ export class KillFeed {
     this._bindChat();
   }
 
-  addKill(killer, victim, isHeadshot) {
-    const entry = document.createElement('div');
-    entry.className = 'kill-feed-entry' + (isHeadshot ? ' headshot' : '');
-    entry.innerHTML = `<span class="feed-killer">${this._esc(killer)}</span><span class="feed-action">${isHeadshot ? '💥' : ' killed '}</span><span class="feed-victim">${this._esc(victim)}</span>`;
-    this.el.appendChild(entry);
-    while (this.el.children.length > this._maxEntries) {
-      this.el.removeChild(this.el.firstChild);
-    }
-    setTimeout(() => { if (entry.parentNode) entry.remove(); }, 4000);
-  }
-
   addChat(name, message) {
     const el = document.createElement('div');
     el.className = 'chat-msg';
@@ -43,20 +32,6 @@ export class KillFeed {
     el.textContent = message;
     this._chatMessages.appendChild(el);
     this._chatMessages.scrollTop = this._chatMessages.scrollHeight;
-  }
-
-  showKillStreak(count, name) {
-    const el = document.getElementById('killStreak');
-    if (!el) return;
-    const labels = ['', '', 'Double Kill!', 'Triple Kill!', 'Quadra Kill!', 'Penta Kill!', 'HEXAKILL!', 'UNSTOPPABLE!'];
-    const text = count >= labels.length ? `${count} KILL STREAK!` : labels[count];
-    el.textContent = `${name} — ${text}`;
-    el.classList.remove('hidden');
-    el.style.animation = 'none';
-    void el.offsetHeight;
-    el.style.animation = '';
-    clearTimeout(this._streakTimer);
-    this._streakTimer = setTimeout(() => el.classList.add('hidden'), 2500);
   }
 
   _bindChat() {

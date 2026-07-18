@@ -11,7 +11,7 @@ export default {
 
   // --- World ---------------------------------------------------------------
   WORLD_RADIUS: 8000,           // circular arena radius; leaving it = death
-  FOOD_TARGET: 5000,            // how many food pellets exist at any time
+  FOOD_TARGET: 8000,            // how many food pellets exist at any time
 
   // --- Population ----------------------------------------------------------
   BOT_TARGET: 40,               // bots fill the world up to this count
@@ -19,15 +19,15 @@ export default {
   // --- Movement ------------------------------------------------------------
   BASE_SPEED: 10,             // units per tick (normal movement)
   BOOST_SPEED: 20,            // units per tick (while boosting)
-  TURN_SPEED: 0.30,             // max radians a snake can turn per tick
+  TURN_SPEED: 0.32,             // max radians a snake can turn per tick
 
   // --- Body / growth -------------------------------------------------------
   POINT_DIST: 3.5,              // visual spacing between body points
   MIN_POINTS: 12,               // smallest snake body length
   MAX_POINTS: 22000,            // hard cap on longest snake
-  SCORE_PER_POINT: 2,           // score needed per extra body point
+  SCORE_PER_POINT: 6,           // score needed per extra body point
   BODY_RADIUS_MIN: 8,           // thinnest the snake can be
-  BODY_RADIUS_MAX: 100,          // thickest the snake can be
+  BODY_RADIUS_MAX: 120,          // thickest the snake can be
 
   // --- Boost ---------------------------------------------------------------
   BOOST_COST_TICKS: 3,          // lose 1 score every N ticks while boosting (must be integer)
@@ -46,10 +46,10 @@ export default {
 
   // --- Multiplier powerups --------------------------------------------------
   POWERUP_RADIUS: 22,           // visual radius of powerup potions
-  POWERUP_SPAWN_MAX: 12,         // max powerups on the map at once
+  POWERUP_SPAWN_MAX: 26,         // max powerups on the map at once
   POWERUP_LIFETIME_MIN: 60000,  // ms before powerup despawns (min)
   POWERUP_LIFETIME_MAX: 80000,  // ms before powerup despawns (max)
-  POWERUP_SPAWN_INTERVAL: 8,    // ticks between spawn attempts
+  POWERUP_SPAWN_INTERVAL: 4,    // ticks between spawn attempts
 
   // --- Spawn ---------------------------------------------------------------
   SPAWN_INVULN_TICKS: 20,       // invulnerability frames on spawn (~1s)

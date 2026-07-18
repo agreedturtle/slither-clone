@@ -119,30 +119,11 @@ net.on('profileData', (d) => {
   ui.updateProfile(d);
 });
 
-net.on('headshot', (d) => {
-  killFeed.addChat('System', `${d.killer} landed a headshot on ${d.victim}!`);
-});
 
-net.on('killFeed', (d) => {
-  killFeed.addKill(d.killer, d.victim, d.isHeadshot);
-  // Kill streak tracking
-  if (d.killer === authState.username) {
-    myKillStreak++;
-    clearTimeout(myKillStreakTimer);
-    if (myKillStreak >= 2) killFeed.showKillStreak(myKillStreak, 'You');
-    myKillStreakTimer = setTimeout(() => { myKillStreak = 0; }, 5000);
-  } else {
-    myKillStreak = 0;
-  }
-});
 
 net.on('chat', (d) => {
   killFeed.addChat(d.senderName, d.message);
 });
-
-// ---- Kill streak state ----
-let myKillStreak = 0;
-let myKillStreakTimer = null;
 
 // ---- Chat ----
 killFeed.onSend((msg) => {

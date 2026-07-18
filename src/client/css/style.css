@@ -819,52 +819,6 @@ option {
 }
 
 /* =============================================
-   Kill Feed (top-right, in-game)
-   ============================================= */
-#killFeed {
-  position: fixed;
-  top: 16px;
-  right: 16px;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  pointer-events: none;
-  z-index: 6;
-  max-width: 320px;
-}
-.kill-feed-entry {
-  background: rgba(12, 18, 30, 0.75);
-  border-left: 3px solid var(--red);
-  border-radius: 4px;
-  padding: 6px 10px;
-  font-size: 12px;
-  color: var(--text);
-  font-weight: 500;
-  opacity: 0;
-  transform: translateX(30px);
-  animation: feedIn 0.3s ease forwards, feedOut 0.4s ease 3.5s forwards;
-  backdrop-filter: blur(4px);
-}
-.kill-feed-entry.headshot {
-  border-left-color: var(--gold);
-  color: var(--gold);
-  text-shadow: 0 0 8px rgba(251, 191, 36, 0.3);
-}
-.kill-feed-entry .feed-killer { font-weight: 700; color: var(--green); }
-.kill-feed-entry.headshot .feed-killer { color: var(--gold); }
-.kill-feed-entry .feed-action { color: var(--text-dim); margin: 0 3px; }
-.kill-feed-entry .feed-victim { font-weight: 700; color: var(--red); }
-
-@keyframes feedIn {
-  from { opacity: 0; transform: translateX(30px); }
-  to { opacity: 1; transform: translateX(0); }
-}
-@keyframes feedOut {
-  from { opacity: 1; }
-  to { opacity: 0; transform: translateY(-10px); }
-}
-
-/* =============================================
    Chat (bottom-left, in-game)
    ============================================= */
 #chatBox {
@@ -935,34 +889,6 @@ option {
   pointer-events: none;
   z-index: 6;
   transition: opacity 0.3s;
-}
-
-/* =============================================
-   Kill Streak banner (center, in-game)
-   ============================================= */
-#killStreak {
-  position: fixed;
-  top: 60px;
-  left: 50%;
-  transform: translateX(-50%);
-  z-index: 8;
-  pointer-events: none;
-  text-align: center;
-  font-size: 22px;
-  font-weight: 800;
-  color: var(--gold);
-  text-shadow: 0 0 20px rgba(251, 191, 36, 0.5), 0 2px 8px rgba(0,0,0,0.6);
-  letter-spacing: 1px;
-  animation: streakPop 0.4s ease, streakFade 0.5s ease 2s forwards;
-}
-@keyframes streakPop {
-  0% { transform: translateX(-50%) scale(0.5); opacity: 0; }
-  60% { transform: translateX(-50%) scale(1.15); }
-  100% { transform: translateX(-50%) scale(1); opacity: 1; }
-}
-@keyframes streakFade {
-  from { opacity: 1; }
-  to { opacity: 0; transform: translateX(-50%) translateY(-20px); }
 }
 
 /* =============================================

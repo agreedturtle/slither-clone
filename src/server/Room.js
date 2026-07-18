@@ -24,7 +24,7 @@ import {
   encodeSnapshot, encodeFoodAdd, encodeFoodRemove, encodeLeaderboard,
   encodeDeath, encodeRemoveSnake, encodeWelcome, encodePong, encodeError,
   encodeRadar, encodeAdminAck, encodeMultiplier,
-  encodePowerupAdd, encodePowerupRemove, encodeHeadshot, encodeChat, encodeKillFeed,
+  encodePowerupAdd, encodePowerupRemove, encodeHeadshot, encodeChat,
   encodeLeaderboardAlltime,
 } from '../shared/protocol.js';
 import { ADMIN } from '../shared/protocol.js';
@@ -423,16 +423,6 @@ export class Room {
     const killerIsHeadshot = killer && headDist < (killer.bodyRadius + snake.bodyRadius);
     if (this.db && killer && killer.playerRef && killer.playerRef.username) {
       this.db.recordKill(killer.playerRef.username, killerIsHeadshot);
-    }
-
-    // Broadcast kill feed to all players
-    const killerName = killer ? (killer.playerRef?.username || killer.botRef?.name || killer.name || 'bot') : 'world';
-    const victimName = snake.playerRef?.username || snake.botRef?.name || snake.name || 'bot';
-    const feedPacket = encodeKillFeed(killerName, victimName, killerIsHeadshot);
-    for (const p of this.players.values()) {
-      if (p.send) {
-        try { p.send(feedPacket); } catch (_) {}
-      }
     }
 
     // Remove from world.
