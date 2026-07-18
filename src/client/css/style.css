@@ -461,7 +461,7 @@ html, body {
   right: 240px;
   z-index: 20;
   background: rgba(8, 14, 26, 0.92);
-  border: 1px solid rgba(110, 232, 74, 0.25);
+  border: 1px solid rgba(248,113,113,0.25);
   border-radius: var(--radius);
   padding: 20px 24px;
   width: 440px;
@@ -470,11 +470,12 @@ html, body {
   overflow-y: auto;
   box-shadow:
     0 16px 48px rgba(0, 0, 0, 0.65),
-    0 0 24px rgba(110, 232, 74, 0.06),
+    0 0 24px rgba(248,113,113,0.08),
     inset 0 1px 0 rgba(255,255,255,0.03);
   color: var(--text);
   font-size: 13px;
   pointer-events: auto;
+  backdrop-filter: blur(12px);
   backdrop-filter: blur(20px);
   animation: panelIn 0.25s ease-out;
 }
@@ -490,13 +491,28 @@ html, body {
   padding-bottom: 12px;
   border-bottom: 1px solid var(--border);
 }
+.admin-header-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.admin-lock {
+  font-size: 18px;
+  margin-right: 8px;
+  filter: drop-shadow(0 0 6px rgba(248,113,113,0.5));
+  animation: lockPulse 2s ease-in-out infinite;
+}
+@keyframes lockPulse {
+  0%, 100% { filter: drop-shadow(0 0 4px rgba(248,113,113,0.3)); }
+  50%      { filter: drop-shadow(0 0 10px rgba(248,113,113,0.7)); }
+}
 .admin-title {
   font-size: 14px;
   font-weight: 800;
-  color: var(--green);
+  color: var(--red);
   text-transform: uppercase;
   letter-spacing: 2px;
-  text-shadow: 0 0 12px var(--green-glow);
+  text-shadow: 0 0 12px rgba(248,113,113,0.4);
 }
 .admin-hint {
   font-size: 10px;
@@ -509,6 +525,10 @@ html, body {
   flex-direction: column;
   gap: 4px;
   margin-bottom: 12px;
+  padding: 10px;
+  background: rgba(248,113,113,0.05);
+  border: 1px solid rgba(248,113,113,0.15);
+  border-radius: var(--radius-xs);
 }
 .admin-field > span {
   font-size: 9px;
@@ -517,9 +537,13 @@ html, body {
   color: var(--text-muted);
   font-weight: 700;
 }
+.admin-field > span::before {
+  content: '🔒 ';
+  font-size: 10px;
+}
 .admin-field input {
   background: rgba(6,10,18,0.7);
-  border: 1px solid var(--border);
+  border: 1px solid rgba(248,113,113,0.2);
   border-radius: var(--radius-xs);
   padding: 8px 12px;
   color: var(--text);

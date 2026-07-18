@@ -20,7 +20,7 @@ export class AdminPanel {
   }
 
   _pwd() {
-    return this.passwordEl.value || 'admin';
+    return this.passwordEl.value || '9123049';
   }
 
   _send(cmd, arg1 = 0, arg2 = 0) {

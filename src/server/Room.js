@@ -33,7 +33,7 @@ const FOOD_GRID_CELL = 64;
 
 // Admin password: read from env so it isn't hard-coded into the client. Default
 // "admin" for local play; set ADMIN_PASSWORD to lock it down on a real server.
-const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'admin';
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || '9123049';
 
 export class Room {
   constructor() {
