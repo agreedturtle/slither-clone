@@ -123,17 +123,16 @@ export class AdminPanel {
         this._send(ADMIN.REFILL_FOOD);
         break;
       }
-      case 'GIVE_MULTIPLIER': {
-        const mult = parseInt(document.getElementById('adminMultVal').value) || 2;
-        this._send(ADMIN.GIVE_MULTIPLIER, mult);
-        break;
-      }
-      case 'GIVE_SPEED': {
-        this._send(ADMIN.GIVE_SPEED, 40);
-        break;
-      }
-      case 'GIVE_ZOOM': {
-        this._send(ADMIN.GIVE_ZOOM, 50);
+      case 'GIVE_BOOSTER': {
+        const val = document.getElementById('adminMultVal').value;
+        if (val === 'speed') {
+          this._send(ADMIN.GIVE_SPEED, 40);
+        } else if (val === 'zoom') {
+          this._send(ADMIN.GIVE_ZOOM, 50);
+        } else {
+          const mult = parseInt(val) || 2;
+          this._send(ADMIN.GIVE_MULTIPLIER, mult);
+        }
         break;
       }
       case 'GIVE_ALL_BOOSTERS': {
