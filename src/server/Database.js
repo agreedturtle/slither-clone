@@ -17,24 +17,31 @@ export class Database {
       console.warn('[db] No DATABASE_URL — stats will not persist.');
       return;
     }
-    this.pool = new Pool({ connectionString: url, ssl: { rejectUnauthorized: false } });
-    await this.pool.query(`
-      CREATE TABLE IF NOT EXISTS users (
-        username TEXT PRIMARY KEY,
-        password_hash TEXT NOT NULL,
-        salt TEXT NOT NULL,
-        created_at BIGINT NOT NULL
-      );
-      CREATE TABLE IF NOT EXISTS stats (
-        username TEXT PRIMARY KEY REFERENCES users(username),
-        high_score INTEGER DEFAULT 0,
-        total_kills INTEGER DEFAULT 0,
-        headshots INTEGER DEFAULT 0,
-        games_played INTEGER DEFAULT 0,
-        deaths INTEGER DEFAULT 0
-      );
-    `);
-    console.log('[db] PostgreSQL connected.');
+    try {
+      this.pool = new Pool({ connectionString: url, ssl: { rejectUnauthorized: false } });
+      await this.pool.query(`
+        CREATE TABLE IF NOT EXISTS users (
+          username TEXT PRIMARY KEY,
+          password_hash TEXT NOT NULL,
+          salt TEXT NOT NULL,
+          created_at BIGINT NOT NULL
+        )
+      `);
+      await this.pool.query(`
+        CREATE TABLE IF NOT EXISTS stats (
+          username TEXT PRIMARY KEY REFERENCES users(username),
+          high_score INTEGER DEFAULT 0,
+          total_kills INTEGER DEFAULT 0,
+          headshots INTEGER DEFAULT 0,
+          games_played INTEGER DEFAULT 0,
+          deaths INTEGER DEFAULT 0
+        )
+      `);
+      console.log('[db] PostgreSQL connected, tables ready.');
+    } catch (e) {
+      console.error('[db] Failed to connect:', e.message);
+      this.pool = null;
+    }
   }
 
   _q(text, params) {
