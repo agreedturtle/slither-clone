@@ -281,7 +281,6 @@ export class Game {
     // else: snake not yet in map (brief moment after join), keep camera where it is.
 
     // 4) Advance eat particles (fly toward my head, then vanish).
-    const meNow = this.state.snakes.get(this.state.myId);
     const headX = meNow && meNow.renderPts ? meNow.renderPts[0] : 0;
     const headY = meNow && meNow.renderPts ? meNow.renderPts[1] : 0;
     const nowMs = performance.now();
