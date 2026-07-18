@@ -84,7 +84,7 @@ export function pointsToScore(points) {
 }
 
 export function bodyRadiusFromScore(score) {
-  const t = CONFIG.BODY_RADIUS_MIN + Math.pow(score, 0.25) * 0.5;
+  const t = CONFIG.BODY_RADIUS_MIN + Math.pow(score, 0.30) * 0.55;
   return Math.max(CONFIG.BODY_RADIUS_MIN, Math.min(t, CONFIG.BODY_RADIUS_MAX));
 }
 

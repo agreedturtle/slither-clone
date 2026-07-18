@@ -25,7 +25,7 @@ export default {
   POINT_DIST: 3.5,              // visual spacing between body points
   MIN_POINTS: 12,               // smallest snake body length
   MAX_POINTS: 22000,            // hard cap on longest snake
-  SCORE_PER_POINT: 6,           // score needed per extra body point
+  SCORE_PER_POINT: 3,           // score needed per extra body point
   BODY_RADIUS_MIN: 8,           // thinnest the snake can be
   BODY_RADIUS_MAX: 120,          // thickest the snake can be
 
