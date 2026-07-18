@@ -33,7 +33,9 @@ export class Food {
   // Spawn at a specific location with a specific value.
   _spawnAt(x, y, value, death) {
     const colorIdx = death ? FOOD_COLORS.length : (Math.random() * FOOD_COLORS.length) | 0;
-    const lifetime = death ? 0 : (CONFIG.FOOD_LIFETIME_MIN + Math.random() * (CONFIG.FOOD_LIFETIME_MAX - CONFIG.FOOD_LIFETIME_MIN)) | 0;
+    const lifetime = death
+      ? (CONFIG.FOOD_DEATH_LIFETIME_MIN + Math.random() * (CONFIG.FOOD_DEATH_LIFETIME_MAX - CONFIG.FOOD_DEATH_LIFETIME_MIN)) | 0
+      : (CONFIG.FOOD_LIFETIME_MIN + Math.random() * (CONFIG.FOOD_LIFETIME_MAX - CONFIG.FOOD_LIFETIME_MIN)) | 0;
     const pellet = {
       id: this._newId(),
       x, y,
@@ -111,7 +113,7 @@ export class Food {
   sweepExpired() {
     const now = Date.now();
     for (const [id, p] of this.pellets) {
-      if (!p.death && p.lifetime > 0 && now - p.born >= p.lifetime) {
+      if (p.lifetime > 0 && now - p.born >= p.lifetime) {
         this.pellets.delete(id);
         this.removedQueue.push(id);
       }
@@ -137,6 +139,7 @@ export class Food {
       type: typeof type === 'string' ? type : 'mult',
       mult: typeof type === 'number' ? type : 0,
       born: Date.now(),
+      lifetime: (CONFIG.POWERUP_LIFETIME_MIN + Math.random() * (CONFIG.POWERUP_LIFETIME_MAX - CONFIG.POWERUP_LIFETIME_MIN)) | 0,
     };
     this.powerups.set(powerup.id, powerup);
     this.powerupAddQueue.push(powerup);
@@ -154,7 +157,7 @@ export class Food {
   sweepPowerups() {
     const now = Date.now();
     for (const [id, p] of this.powerups) {
-      if (now - p.born >= CONFIG.POWERUP_LIFETIME) {
+      if (now - p.born >= p.lifetime) {
         this.powerups.delete(id);
         this.powerupRemoveQueue.push(id);
       }

@@ -39,13 +39,16 @@ export default {
   FOOD_VALUE_DEATH_MAX: 50,        // max value of death-drop pellets
   FOOD_RADIUS_SMALL: 6,         // visual radius of normal food
   FOOD_RADIUS_DEATH: 10,        // visual radius of death-drop food
-  FOOD_LIFETIME_MIN: 50000,     // ms before normal food despawns (min)
-  FOOD_LIFETIME_MAX: 70000,     // ms before normal food despawns (max)
+  FOOD_DEATH_LIFETIME_MIN: 50000, // ms before death food despawns (min)
+  FOOD_DEATH_LIFETIME_MAX: 70000, // ms before death food despawns (max)
+  FOOD_LIFETIME_MIN: 120000,    // ms before normal food despawns (min)
+  FOOD_LIFETIME_MAX: 160000,    // ms before normal food despawns (max)
 
   // --- Multiplier powerups --------------------------------------------------
   POWERUP_RADIUS: 22,           // visual radius of powerup potions
   POWERUP_SPAWN_MAX: 12,         // max powerups on the map at once
-  POWERUP_LIFETIME: 45000,      // ms before powerup despawns
+  POWERUP_LIFETIME_MIN: 60000,  // ms before powerup despawns (min)
+  POWERUP_LIFETIME_MAX: 80000,  // ms before powerup despawns (max)
   POWERUP_SPAWN_INTERVAL: 8,    // ticks between spawn attempts
 
   // --- Spawn ---------------------------------------------------------------

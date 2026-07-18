@@ -40,13 +40,16 @@ export const CONFIG = {
   FOOD_VALUE_DEATH_MAX: 22,
   FOOD_RADIUS_SMALL: 5,
   FOOD_RADIUS_DEATH: 8,
-  FOOD_LIFETIME_MIN: 50000,
-  FOOD_LIFETIME_MAX: 70000,
+  FOOD_DEATH_LIFETIME_MIN: 50000,
+  FOOD_DEATH_LIFETIME_MAX: 70000,
+  FOOD_LIFETIME_MIN: 120000,
+  FOOD_LIFETIME_MAX: 160000,
 
   // --- Multiplier powerups --------------------------------------------------
   POWERUP_RADIUS: 14,
   POWERUP_SPAWN_MAX: 8,
-  POWERUP_LIFETIME: 45000,
+  POWERUP_LIFETIME_MIN: 60000,
+  POWERUP_LIFETIME_MAX: 80000,
   POWERUP_SPAWN_INTERVAL: 8,
 
   // --- Spawn ---------------------------------------------------------------
