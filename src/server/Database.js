@@ -42,7 +42,10 @@ export class Database {
     return this.pool.query(text, params);
   }
 
+  get isReady() { return !!this.pool; }
+
   register(username, password) {
+    if (!this.pool) return Promise.resolve({ ok: false, msg: 'Accounts unavailable — no database configured' });
     const name = filterName(username);
     if (!name) return { ok: false, msg: 'Inappropriate username' };
     if (name.length < 2 || name.length > 16) return { ok: false, msg: 'Name must be 2-16 characters' };
@@ -64,6 +67,7 @@ export class Database {
   }
 
   login(username, password) {
+    if (!this.pool) return Promise.resolve({ ok: false, msg: 'Accounts unavailable — no database configured' });
     const name = (username || '').trim().toLowerCase();
     return this._q('SELECT password_hash, salt FROM users WHERE username = $1', [name])
       .then(r => {

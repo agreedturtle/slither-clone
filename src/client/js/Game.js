@@ -121,10 +121,10 @@ export class Game {
       };
       this.state.snakes.set(s.id, entry);
     }
-    // Remove snakes not in this snapshot (left view or died).
-    // Keep dead player's snake briefly but mark it as gone.
+    // Remove snakes not in this snapshot (left view or died) except keep my own
+    // briefly so rendering doesn't pop.
     for (const id of Array.from(this.state.snakes.keys())) {
-      if (!seen.has(id)) this.state.snakes.delete(id);
+      if (!seen.has(id) && id !== this.state.myId) this.state.snakes.delete(id);
     }
 
     // Update my own score/alive flag.
@@ -157,6 +157,8 @@ export class Game {
     this._deathScore = d.finalScore;
     this._deathRank = d.finalRank;
     this._deathScreenShown = false;
+    // Remove my snake so camera stops following it immediately
+    this.state.snakes.delete(this.state.myId);
   }
 
   // ---- Public API ----
@@ -221,24 +223,20 @@ export class Game {
     // 3) Camera follows MY smoothed head (or freezes at death position).
     this.camera.setDt(dt);
     const meNow = this.state.snakes.get(this.state.myId);
-    if (this.state.alive && meNow && meNow.renderPts.length >= 2) {
-      this.camera.follow(meNow.renderPts[0], meNow.renderPts[1]);
-      this.camera.setZoom(zoomFromScore(meNow.score));
-      this.hud.setBoost(meNow.boosting);
-    } else if (!this.state.alive && this._deathPos) {
+    if (!this.state.alive && this._deathPos) {
       // Dead — hold camera at the death spot so the world stays visible.
       this.camera.follow(this._deathPos.x, this._deathPos.y);
-      // Freeze zoom — don't call setZoom so it stays at last value.
       // Show death screen after 3-second delay.
       if (!this._deathScreenShown && performance.now() - this._deathTime >= 3000) {
         this._deathScreenShown = true;
         this.ui.showDeath(this._deathScore, this._deathRank);
       }
-    } else {
-      this.camera.follow(0, 0);
-      this.camera.setZoom(1.45);
-      this.hud.setBoost(false);
+    } else if (meNow && meNow.renderPts.length >= 2) {
+      this.camera.follow(meNow.renderPts[0], meNow.renderPts[1]);
+      this.camera.setZoom(zoomFromScore(meNow.score));
+      this.hud.setBoost(meNow.boosting);
     }
+    // else: snake not yet in map (brief moment after join), keep camera where it is.
 
     // 4) Render.
     this.renderer.draw(this.state, this.camera);
