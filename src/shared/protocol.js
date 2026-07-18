@@ -11,6 +11,7 @@
 // ===========================================================================
 
 import { CONFIG } from './constants.js';
+import { isClean } from './filter.js';
 
 // --- Client -> Server opcodes ---------------------------------------------
 export const C2S = {
@@ -24,6 +25,7 @@ export const C2S = {
   REGISTER: 8,    // { username:str, password:str }
   AUTH_TOKEN: 9,  // { token:str }   auto-login with saved token
   PROFILE: 10,    // {}   request own stats
+  CHAT: 11,       // { message:str }  in-game chat
 };
 
 // Admin sub-commands (the `cmd` byte inside an ADMIN frame).
@@ -63,6 +65,8 @@ export const S2C = {
   AUTH_RESULT: 15,    // { ok:u8, msg:utf8, token:utf8, username:utf8 }
   PROFILE_DATA: 16,   // { username:utf8, highScore:u32, totalKills:u16, headshots:u16, gamesPlayed:u16, deaths:u16 }
   HEADSHOT: 17,       // { killerName:utf8, victimName:utf8 }   kill notification
+  CHAT: 18,           // { senderName:utf8, message:utf8 }
+  KILL_FEED: 19,      // { killer:utf8, victim:utf8, isHeadshot:u8 }
 };
 
 // We ship the number of skins/colors over the wire too so the client can map
@@ -457,6 +461,11 @@ export function decodeClientMessage(u8) {
     }
     case C2S.PROFILE:
       return { op };
+    case C2S.CHAT: {
+      const message = r.str();
+      if (message === undefined) return null;
+      return { op, message: message.slice(0, 80) };
+    }
     default:
       return null;
   }
@@ -464,7 +473,9 @@ export function decodeClientMessage(u8) {
 
 function sanitizeName(s) {
   const trimmed = (s || '').trim().slice(0, 16);
-  return trimmed.length === 0 ? '' : trimmed;
+  if (trimmed.length === 0) return '';
+  if (!isClean(trimmed)) return 'anon';
+  return trimmed;
 }
 
 // Server -> client acknowledgement for an admin command.
@@ -571,6 +582,33 @@ export function encodeHeadshot(killerName, victimName) {
   const w = new Writer(64);
   w.op(S2C.HEADSHOT).str(killerName).str(victimName);
   return w.toUint8();
+}
+
+export function encodeChat(senderName, message) {
+  const w = new Writer(128);
+  w.op(S2C.CHAT).str(senderName).str(message);
+  return w.toUint8();
+}
+
+export function decodeChat(r) {
+  const senderName = r.str();
+  const message = r.str();
+  if (senderName === undefined || message === undefined) return null;
+  return { senderName, message };
+}
+
+export function encodeKillFeed(killer, victim, isHeadshot) {
+  const w = new Writer(128);
+  w.op(S2C.KILL_FEED).str(killer).str(victim).u8(isHeadshot ? 1 : 0);
+  return w.toUint8();
+}
+
+export function decodeKillFeed(r) {
+  const killer = r.str();
+  const victim = r.str();
+  const isHeadshot = r.u8();
+  if (killer === undefined) return null;
+  return { killer, victim, isHeadshot: isHeadshot === 1 };
 }
 
 // --- Client encoders for auth ---

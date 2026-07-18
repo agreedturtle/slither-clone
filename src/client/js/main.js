@@ -10,6 +10,7 @@ import Game from './Game.js';
 import Hud from './Hud.js';
 import Ui from './ui.js';
 import AdminPanel from './AdminPanel.js';
+import KillFeed from './KillFeed.js';
 
 const canvas = document.getElementById('game');
 
@@ -20,6 +21,7 @@ const renderer = new Renderer(canvas);
 const hud = new Hud();
 const ui = new Ui();
 const adminPanel = new AdminPanel(net);
+const killFeed = new KillFeed();
 
 const game = new Game({ net, renderer, camera, input, hud, ui });
 
@@ -33,6 +35,7 @@ if (savedToken && savedUsername) {
   authState.token = savedToken;
   authState.username = savedUsername;
   ui.showLoggedIn(savedUsername);
+  adminPanel.setAdminUser(savedUsername);
 }
 
 // ---- Auth UI wiring ----
@@ -96,6 +99,7 @@ ui.profileLogoutBtn.addEventListener('click', () => {
   localStorage.removeItem('slither_token');
   localStorage.removeItem('slither_username');
   ui.showLoggedOut();
+  adminPanel.setAdminUser(null);
   ui.hideProfile();
   ui.showMenu();
 });
@@ -107,6 +111,7 @@ net.on('authResult', (d) => {
     authState.username = d.username;
     localStorage.setItem('slither_token', d.token);
     localStorage.setItem('slither_username', d.username);
+    adminPanel.setAdminUser(d.username);
     ui.showAuthSuccess(`Logged in as ${d.username}`);
     ui.showLoggedIn(d.username);
     setTimeout(() => {
@@ -123,8 +128,33 @@ net.on('profileData', (d) => {
 });
 
 net.on('headshot', (d) => {
-  // Could show a notification; for now just console log
-  console.log(`Headshot! ${d.killer} -> ${d.victim}`);
+  killFeed.addChat('System', `${d.killer} landed a headshot on ${d.victim}!`);
+});
+
+net.on('killFeed', (d) => {
+  killFeed.addKill(d.killer, d.victim, d.isHeadshot);
+  // Kill streak tracking
+  if (d.killer === authState.username) {
+    myKillStreak++;
+    clearTimeout(myKillStreakTimer);
+    if (myKillStreak >= 2) killFeed.showKillStreak(myKillStreak, 'You');
+    myKillStreakTimer = setTimeout(() => { myKillStreak = 0; }, 5000);
+  } else {
+    myKillStreak = 0;
+  }
+});
+
+net.on('chat', (d) => {
+  killFeed.addChat(d.senderName, d.message);
+});
+
+// ---- Kill streak state ----
+let myKillStreak = 0;
+let myKillStreakTimer = null;
+
+// ---- Chat ----
+killFeed.onSend((msg) => {
+  net.sendChat(msg);
 });
 
 // ---- Button wiring ----
@@ -161,9 +191,16 @@ if (ui.boostBtn) {
 
 // ---- Keyboard ----
 window.addEventListener('keydown', (e) => {
-  // Enter: play from menu OR respawn from death.
+  // Enter: open chat if in game, play from menu, or respawn from death.
   if (e.code === 'Enter') {
-    if (!ui.menu.classList.contains('hidden') && net.connected) {
+    if (killFeed.chatOpen) return; // let chat handle it
+    if (hud && !hud.el.classList.contains('hidden') && !ui.death.classList.contains('hidden')) {
+      // dead — respawn
+    } else if (hud && !hud.el.classList.contains('hidden')) {
+      e.preventDefault();
+      killFeed.openChat();
+      return;
+    } else if (!ui.menu.classList.contains('hidden') && net.connected) {
       game.join(ui.getName(), ui.getSkin());
     } else if (!ui.death.classList.contains('hidden')) {
       game.respawn();

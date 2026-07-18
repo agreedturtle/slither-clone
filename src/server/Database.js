@@ -1,6 +1,7 @@
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { randomBytes, scryptSync, timingSafeEqual } from 'node:crypto';
+import { filterName } from '../shared/filter.js';
 
 const DATA_DIR = join(process.cwd(), 'data');
 const USERS_FILE = join(DATA_DIR, 'users.json');
@@ -35,7 +36,8 @@ export class Database {
   _saveStats() { saveJSON(STATS_FILE, this.stats); }
 
   register(username, password) {
-    const name = username.trim().toLowerCase();
+    const name = filterName(username);
+    if (!name) return { ok: false, msg: 'Inappropriate username' };
     if (name.length < 2 || name.length > 16) return { ok: false, msg: 'Name must be 2-16 characters' };
     if (password.length < 4) return { ok: false, msg: 'Password must be 4+ characters' };
     if (this.users[name]) return { ok: false, msg: 'Username already taken' };

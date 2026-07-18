@@ -13,6 +13,7 @@ import { C2S, S2C, Writer, Reader,
   decodeWelcome, decodeSnapshot, decodeFoodAdd, decodeFoodRemove,
   decodeLeaderboard, decodeDeath, decodeRadar, decodeMultiplier,
   decodePowerupAdd, decodePowerupRemove, decodeAuthResult, decodeProfileData,
+  decodeChat, decodeKillFeed,
   encodeLogin, encodeRegister, encodeAuthToken, encodeProfileRequest,
 } from '../../shared/protocol.js';
 
@@ -149,6 +150,16 @@ export class Net {
         if (killer !== undefined) this._emit('headshot', { killer, victim });
         break;
       }
+      case S2C.CHAT: {
+        const d = decodeChat(r);
+        if (d) this._emit('chat', d);
+        break;
+      }
+      case S2C.KILL_FEED: {
+        const d = decodeKillFeed(r);
+        if (d) this._emit('killFeed', d);
+        break;
+      }
       default: break;
     }
   }
@@ -219,6 +230,12 @@ export class Net {
 
   sendProfileRequest() {
     this._send(encodeProfileRequest());
+  }
+
+  sendChat(message) {
+    const w = new Writer();
+    w.op(C2S.CHAT).str(message);
+    this._send(w.toUint8());
   }
 }
 

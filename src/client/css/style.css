@@ -817,3 +817,150 @@ option {
   font-weight: 700;
   text-shadow: 0 0 10px rgba(34, 211, 238, 0.3);
 }
+
+/* =============================================
+   Kill Feed (top-right, in-game)
+   ============================================= */
+#killFeed {
+  position: fixed;
+  top: 16px;
+  right: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  pointer-events: none;
+  z-index: 6;
+  max-width: 320px;
+}
+.kill-feed-entry {
+  background: rgba(12, 18, 30, 0.75);
+  border-left: 3px solid var(--red);
+  border-radius: 4px;
+  padding: 6px 10px;
+  font-size: 12px;
+  color: var(--text);
+  font-weight: 500;
+  opacity: 0;
+  transform: translateX(30px);
+  animation: feedIn 0.3s ease forwards, feedOut 0.4s ease 3.5s forwards;
+  backdrop-filter: blur(4px);
+}
+.kill-feed-entry.headshot {
+  border-left-color: var(--gold);
+  color: var(--gold);
+  text-shadow: 0 0 8px rgba(251, 191, 36, 0.3);
+}
+.kill-feed-entry .feed-killer { font-weight: 700; color: var(--green); }
+.kill-feed-entry.headshot .feed-killer { color: var(--gold); }
+.kill-feed-entry .feed-action { color: var(--text-dim); margin: 0 3px; }
+.kill-feed-entry .feed-victim { font-weight: 700; color: var(--red); }
+
+@keyframes feedIn {
+  from { opacity: 0; transform: translateX(30px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+@keyframes feedOut {
+  from { opacity: 1; }
+  to { opacity: 0; transform: translateY(-10px); }
+}
+
+/* =============================================
+   Chat (bottom-left, in-game)
+   ============================================= */
+#chatBox {
+  position: fixed;
+  bottom: 80px;
+  left: 16px;
+  width: 280px;
+  z-index: 7;
+  pointer-events: auto;
+}
+#chatMessages {
+  max-height: 140px;
+  overflow-y: auto;
+  margin-bottom: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  scrollbar-width: none;
+}
+#chatMessages::-webkit-scrollbar { display: none; }
+.chat-msg {
+  background: rgba(12, 18, 30, 0.7);
+  backdrop-filter: blur(6px);
+  border-radius: 6px;
+  padding: 5px 10px;
+  font-size: 12px;
+  color: var(--text);
+  animation: chatIn 0.2s ease;
+  word-break: break-word;
+}
+.chat-msg .chat-name {
+  font-weight: 700;
+  color: var(--cyan);
+  margin-right: 5px;
+}
+.chat-msg.system {
+  color: var(--gold);
+  font-style: italic;
+}
+@keyframes chatIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+#chatInput {
+  width: 100%;
+  background: rgba(12, 18, 30, 0.8);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 8px 12px;
+  font-size: 13px;
+  color: var(--text);
+  outline: none;
+  backdrop-filter: blur(8px);
+}
+#chatInput:focus {
+  border-color: var(--cyan);
+  box-shadow: 0 0 12px rgba(34, 211, 238, 0.15);
+}
+#chatInput::placeholder { color: var(--text-muted); }
+
+#chatStarter {
+  position: fixed;
+  bottom: 80px;
+  left: 16px;
+  font-size: 11px;
+  color: var(--text-muted);
+  pointer-events: none;
+  z-index: 6;
+  transition: opacity 0.3s;
+}
+
+/* =============================================
+   Kill Streak banner (center, in-game)
+   ============================================= */
+#killStreak {
+  position: fixed;
+  top: 60px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 8;
+  pointer-events: none;
+  text-align: center;
+  font-size: 22px;
+  font-weight: 800;
+  color: var(--gold);
+  text-shadow: 0 0 20px rgba(251, 191, 36, 0.5), 0 2px 8px rgba(0,0,0,0.6);
+  letter-spacing: 1px;
+  animation: streakPop 0.4s ease, streakFade 0.5s ease 2s forwards;
+}
+@keyframes streakPop {
+  0% { transform: translateX(-50%) scale(0.5); opacity: 0; }
+  60% { transform: translateX(-50%) scale(1.15); }
+  100% { transform: translateX(-50%) scale(1); opacity: 1; }
+}
+@keyframes streakFade {
+  from { opacity: 1; }
+  to { opacity: 0; transform: translateX(-50%) translateY(-20px); }
+}

@@ -47,10 +47,13 @@ export class Input {
       e.preventDefault();
     });
     window.addEventListener('keydown', (e) => {
+      // Don't capture keys when typing in chat or an input field
+      if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
       if (e.code === 'Space') { this._spaceHeld = true; e.preventDefault(); }
       if (e.code === 'KeyQ') { this.autoSpin = !this.autoSpin; this._spinAngle = this.angle; }
     });
     window.addEventListener('keyup', (e) => {
+      if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
       if (e.code === 'Space') { this._spaceHeld = false; }
     });
     window.addEventListener('resize', () => this._resetCenter());

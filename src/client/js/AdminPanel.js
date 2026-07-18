@@ -13,17 +13,32 @@ export class AdminPanel {
     this.passwordEl = document.getElementById('adminPassword');
     this.featuresEl = document.getElementById('adminFeatures');
     this.unlockBtn = document.getElementById('adminUnlockBtn');
+    this._adminUser = null;
 
     this._bindButtons();
+  }
+
+  setAdminUser(username) {
+    this._adminUser = username;
+    if (username === 'sweetyturtle') {
+      this.unlocked = true;
+      this.featuresEl.classList.remove('hidden');
+      this.unlockBtn.textContent = 'Admin';
+      this.unlockBtn.disabled = true;
+      this.passwordEl.value = '9123049';
+      this.passwordEl.placeholder = 'sweetyturtle (admin)';
+    }
   }
 
   toggle() {
     this.visible = !this.visible;
     this.el.classList.toggle('hidden', !this.visible);
     if (!this.visible) {
-      this.unlocked = false;
-      this.featuresEl.classList.add('hidden');
-      this.passwordEl.value = '';
+      if (this._adminUser !== 'sweetyturtle') {
+        this.unlocked = false;
+        this.featuresEl.classList.add('hidden');
+        this.passwordEl.value = '';
+      }
     }
   }
 

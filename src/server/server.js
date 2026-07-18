@@ -131,6 +131,7 @@ wss.on('connection', (ws) => {
         case C2S.PING:    room.handlePing(player, msg); break;
         case C2S.ADMIN:   room.handleAdmin(player, msg); break;
         case C2S.MULTIPLIER: room.handleMultiplier(player); break;
+        case C2S.CHAT:       room.handleChat(player, msg); break;
         case C2S.LOGIN: {
           const result = db.login(msg.username, msg.password);
           try {
