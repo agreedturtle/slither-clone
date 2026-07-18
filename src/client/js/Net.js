@@ -13,7 +13,7 @@ import { C2S, S2C, Writer, Reader,
   decodeWelcome, decodeSnapshot, decodeFoodAdd, decodeFoodRemove,
   decodeLeaderboard, decodeDeath, decodeRadar, decodeMultiplier,
   decodePowerupAdd, decodePowerupRemove, decodeAuthResult, decodeProfileData,
-  decodeChat, decodeKillFeed,
+  decodeChat, decodeKillFeed, decodeLeaderboardAlltime,
   encodeLogin, encodeRegister, encodeAuthToken, encodeProfileRequest,
 } from '../../shared/protocol.js';
 
@@ -25,7 +25,10 @@ export class Net {
     this.lastInputSent = 0;
     this._lastInput = { angle: 0, boost: 0 };
     this._inputTimer = null;
+    this._authToken = null;
   }
+
+  setAuthToken(token) { this._authToken = token; }
 
   on(evt, fn) {
     let arr = this.handlers.get(evt);
@@ -46,6 +49,7 @@ export class Net {
     this.ws.addEventListener('open', () => {
       this.connected = true;
       this._emit('open');
+      if (this._authToken) this.sendAuthToken(this._authToken);
     });
     this.ws.addEventListener('close', () => {
       this.connected = false;
@@ -160,6 +164,11 @@ export class Net {
         if (d) this._emit('killFeed', d);
         break;
       }
+      case S2C.LEADERBOARD_ALLTIME: {
+        const d = decodeLeaderboardAlltime(r);
+        if (d) this._emit('leaderboardAlltime', d);
+        break;
+      }
       default: break;
     }
   }
@@ -235,6 +244,12 @@ export class Net {
   sendChat(message) {
     const w = new Writer();
     w.op(C2S.CHAT).str(message);
+    this._send(w.toUint8());
+  }
+
+  requestLeaderboardAlltime() {
+    const w = new Writer();
+    w.op(C2S.LEADERBOARD_ALLTIME);
     this._send(w.toUint8());
   }
 }

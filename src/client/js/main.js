@@ -28,15 +28,9 @@ const game = new Game({ net, renderer, camera, input, hud, ui });
 // ---- Auth state ----
 let authState = { token: null, username: null };
 
-// Try to restore saved token
-const savedToken = localStorage.getItem('slither_token');
-const savedUsername = localStorage.getItem('slither_username');
-if (savedToken && savedUsername) {
-  authState.token = savedToken;
-  authState.username = savedUsername;
-  ui.showLoggedIn(savedUsername);
-  adminPanel.setAdminUser(savedUsername);
-}
+// Clear previous session — require re-login each time
+localStorage.removeItem('slither_token');
+localStorage.removeItem('slither_username');
 
 // ---- Auth UI wiring ----
 let authMode = 'login'; // 'login' or 'register'
@@ -96,8 +90,7 @@ ui.profileBackBtn.addEventListener('click', () => {
 ui.profileLogoutBtn.addEventListener('click', () => {
   authState.token = null;
   authState.username = null;
-  localStorage.removeItem('slither_token');
-  localStorage.removeItem('slither_username');
+  net.setAuthToken(null);
   ui.showLoggedOut();
   adminPanel.setAdminUser(null);
   ui.hideProfile();
@@ -109,11 +102,10 @@ net.on('authResult', (d) => {
   if (d.ok) {
     authState.token = d.token;
     authState.username = d.username;
-    localStorage.setItem('slither_token', d.token);
-    localStorage.setItem('slither_username', d.username);
-    adminPanel.setAdminUser(d.username);
+    net.setAuthToken(d.token);
     ui.showAuthSuccess(`Logged in as ${d.username}`);
     ui.showLoggedIn(d.username);
+    adminPanel.setAdminUser(d.username);
     setTimeout(() => {
       ui.hideLoginScreen();
       ui.showMenu();
@@ -177,6 +169,34 @@ ui.skinsBtn.addEventListener('click', () => {
 ui.skinsBackBtn.addEventListener('click', () => {
   ui.hideSkins();
   ui.showMenu();
+});
+
+// ---- All-time leaderboard ----
+let alltimeData = [];
+let alltimeSortBy = 'score';
+
+ui.alltimeBtn.addEventListener('click', () => {
+  ui.hideMenu();
+  ui.showAlltime();
+  net.requestLeaderboardAlltime();
+});
+ui.alltimeBackBtn.addEventListener('click', () => {
+  ui.hideAlltime();
+  ui.showMenu();
+});
+
+// Tab switching
+document.querySelectorAll('.alltime-tabs .tab-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    alltimeSortBy = btn.dataset.tab;
+    document.querySelectorAll('.alltime-tabs .tab-btn').forEach(b => b.classList.toggle('active', b === btn));
+    ui.updateAlltime(alltimeData, alltimeSortBy, authState.username);
+  });
+});
+
+net.on('leaderboardAlltime', (d) => {
+  alltimeData = d.entries;
+  ui.updateAlltime(d.entries, alltimeSortBy, authState.username);
 });
 
 // Touch boost button: hold to boost.

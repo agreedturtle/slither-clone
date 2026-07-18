@@ -52,11 +52,20 @@ export class Ui {
     this.profileBackBtn = document.getElementById('profileBackBtn');
     this.profileLogoutBtn = document.getElementById('profileLogoutBtn');
 
+    // All-time leaderboard
+    this.alltimeScreen = document.getElementById('alltimeScreen');
+    this.alltimeBtn = document.getElementById('alltimeBtn');
+    this.alltimeBackBtn = document.getElementById('alltimeBackBtn');
+    this.alltimeList = document.getElementById('alltimeList');
+
     this.selectedSkin = 0;
     this._previewFrame = 0;
     this._previewAnimId = null;
+    this._wormFrame = 0;
+    this._wormAnimId = null;
     this._buildSkinPicker();
     this._startPreviewAnim();
+    this._startWormAnim();
   }
 
   _buildSkinPicker() {
@@ -283,6 +292,147 @@ export class Ui {
     if (this.profileHeadshots) this.profileHeadshots.textContent = (d.headshots || 0).toLocaleString();
     if (this.profileGames) this.profileGames.textContent = (d.gamesPlayed || 0).toLocaleString();
     if (this.profileDeaths) this.profileDeaths.textContent = (d.deaths || 0).toLocaleString();
+  }
+
+  // ---- All-time leaderboard ----
+  showAlltime() { this.alltimeScreen.classList.remove('hidden'); }
+  hideAlltime() { this.alltimeScreen.classList.add('hidden'); }
+
+  updateAlltime(entries, sortBy, myName) {
+    if (!this.alltimeList) return;
+    if (!entries || entries.length === 0) {
+      this.alltimeList.innerHTML = '<div class="alltime-empty">No players yet</div>';
+      return;
+    }
+    const sorted = sortBy === 'kills'
+      ? [...entries].sort((a, b) => b.totalKills - a.totalKills)
+      : [...entries].sort((a, b) => b.highScore - a.highScore);
+
+    this.alltimeList.innerHTML = '';
+    sorted.forEach((e, i) => {
+      const row = document.createElement('div');
+      row.className = 'alltime-row' + (e.name === myName ? ' me' : '');
+      const medal = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : '';
+      const val = sortBy === 'kills' ? e.totalKills.toLocaleString() : e.highScore.toLocaleString();
+      const extra = sortBy === 'kills'
+        ? `<span class="alltime-val headshots">${e.headshots || 0} HS</span>`
+        : `<span class="alltime-val kills">${e.totalKills || 0} kills</span>`;
+      row.innerHTML = `
+        <span class="alltime-rank">${medal || (i + 1)}</span>
+        <span class="alltime-name">${this._esc(e.name)}</span>
+        <span class="alltime-val">${val}</span>
+        ${extra}
+      `;
+      this.alltimeList.appendChild(row);
+    });
+  }
+
+  _esc(s) {
+    const d = document.createElement('div');
+    d.textContent = s;
+    return d.innerHTML;
+  }
+
+  // ---- Menu worm animation ----
+  _startWormAnim() {
+    const canvas = document.getElementById('wormCanvas');
+    if (!canvas) return;
+    const loop = () => {
+      if (this.menu && this.menu.classList.contains('hidden')) {
+        this._wormAnimId = null;
+        return;
+      }
+      this._wormFrame++;
+      this._drawWorm(canvas);
+      this._wormAnimId = requestAnimationFrame(loop);
+    };
+    this._wormAnimId = requestAnimationFrame(loop);
+  }
+
+  _drawWorm(canvas) {
+    const ctx = canvas.getContext('2d');
+    const W = canvas.width, H = canvas.height;
+    ctx.clearRect(0, 0, W, H);
+
+    const t = this._wormFrame * 0.025;
+    const segs = 30;
+    const pts = [];
+    for (let i = 0; i < segs; i++) {
+      const f = i / (segs - 1);
+      const wave = Math.sin(f * Math.PI * 3 - t * 2.5) * (12 + f * 6);
+      const x = 10 + f * (W - 20);
+      const y = H / 2 + wave;
+      pts.push(x, y);
+    }
+
+    const lw = 12;
+    const skins = [
+      { main: '#6ee84a', shade: '#3cb61e', glow: '#a0ff70' },
+      { main: '#22d3ee', shade: '#0ea5e9', glow: '#67e8f9' },
+      { main: '#f87171', shade: '#dc2626', glow: '#fca5a5' },
+      { main: '#fbbf24', shade: '#d97706', glow: '#fde68a' },
+    ];
+    const skin = skins[(this._wormFrame / 120 | 0) % skins.length];
+
+    ctx.lineJoin = 'round';
+    ctx.lineCap = 'round';
+
+    // Shadow
+    ctx.strokeStyle = 'rgba(0,0,0,0.2)';
+    ctx.lineWidth = lw + 3;
+    ctx.beginPath();
+    ctx.moveTo(pts[0] + 2, pts[1] + 3);
+    for (let i = 1; i < segs; i++) ctx.lineTo(pts[i * 2] + 2, pts[i * 2 + 1] + 3);
+    ctx.stroke();
+
+    // Outer
+    ctx.strokeStyle = skin.shade;
+    ctx.lineWidth = lw + 3;
+    ctx.beginPath();
+    ctx.moveTo(pts[0], pts[1]);
+    for (let i = 1; i < segs; i++) ctx.lineTo(pts[i * 2], pts[i * 2 + 1]);
+    ctx.stroke();
+
+    // Body
+    ctx.strokeStyle = skin.main;
+    ctx.lineWidth = lw;
+    ctx.beginPath();
+    ctx.moveTo(pts[0], pts[1]);
+    for (let i = 1; i < segs; i++) ctx.lineTo(pts[i * 2], pts[i * 2 + 1]);
+    ctx.stroke();
+
+    // Highlight
+    ctx.strokeStyle = skin.glow;
+    ctx.globalAlpha = 0.4;
+    ctx.lineWidth = lw * 0.3;
+    ctx.beginPath();
+    ctx.moveTo(pts[0], pts[1]);
+    for (let i = 1; i < segs; i++) ctx.lineTo(pts[i * 2], pts[i * 2 + 1]);
+    ctx.stroke();
+    ctx.globalAlpha = 1;
+
+    // Head
+    const hx = pts[0], hy = pts[1];
+    const headR = lw / 2 + 1;
+    ctx.fillStyle = skin.glow;
+    ctx.beginPath();
+    ctx.arc(hx, hy, headR, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Eyes
+    const ang = Math.atan2(pts[1] - pts[3], pts[0] - pts[2]);
+    const eo = headR * 0.42, ef = headR * 0.3, eyeR = headR * 0.32;
+    for (const side of [-1, 1]) {
+      const ex = hx + Math.cos(ang) * ef + Math.cos(ang + Math.PI / 2) * eo * side;
+      const ey = hy + Math.sin(ang) * ef + Math.sin(ang + Math.PI / 2) * eo * side;
+      ctx.fillStyle = '#fff';
+      ctx.beginPath(); ctx.arc(ex, ey, eyeR, 0, Math.PI * 2); ctx.fill();
+      const px = Math.cos(ang) * eyeR * 0.4, py = Math.sin(ang) * eyeR * 0.4;
+      ctx.fillStyle = '#0b0f14';
+      ctx.beginPath(); ctx.arc(ex + px, ey + py, eyeR * 0.5, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = '#fff';
+      ctx.beginPath(); ctx.arc(ex - px * 0.3, ey - py * 0.3, eyeR * 0.18, 0, Math.PI * 2); ctx.fill();
+    }
   }
 }
 

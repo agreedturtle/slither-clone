@@ -26,6 +26,7 @@ export const C2S = {
   AUTH_TOKEN: 9,  // { token:str }   auto-login with saved token
   PROFILE: 10,    // {}   request own stats
   CHAT: 11,       // { message:str }  in-game chat
+  LEADERBOARD_ALLTIME: 12, // {} request all-time leaderboard
 };
 
 // Admin sub-commands (the `cmd` byte inside an ADMIN frame).
@@ -67,6 +68,7 @@ export const S2C = {
   HEADSHOT: 17,       // { killerName:utf8, victimName:utf8 }   kill notification
   CHAT: 18,           // { senderName:utf8, message:utf8 }
   KILL_FEED: 19,      // { killer:utf8, victim:utf8, isHeadshot:u8 }
+  LEADERBOARD_ALLTIME: 20, // count:u16, [ name:str, highScore:u32, totalKills:u16, headshots:u16 ]*n
 };
 
 // We ship the number of skins/colors over the wire too so the client can map
@@ -466,6 +468,8 @@ export function decodeClientMessage(u8) {
       if (message === undefined) return null;
       return { op, message: message.slice(0, 80) };
     }
+    case C2S.LEADERBOARD_ALLTIME:
+      return { op };
     default:
       return null;
   }
@@ -609,6 +613,30 @@ export function decodeKillFeed(r) {
   const isHeadshot = r.u8();
   if (killer === undefined) return null;
   return { killer, victim, isHeadshot: isHeadshot === 1 };
+}
+
+export function encodeLeaderboardAlltime(entries) {
+  const w = new Writer(8 + entries.length * 60);
+  w.op(S2C.LEADERBOARD_ALLTIME).u16(entries.length);
+  for (const e of entries) {
+    w.str(e.name).u32(e.highScore >>> 0).u16(Math.min(e.totalKills, 65535)).u16(Math.min(e.headshots || 0, 65535));
+  }
+  return w.toUint8();
+}
+
+export function decodeLeaderboardAlltime(r) {
+  const count = r.u16();
+  if (count === undefined) return null;
+  const entries = [];
+  for (let i = 0; i < count; i++) {
+    const name = r.str();
+    const highScore = r.u32();
+    const totalKills = r.u16();
+    const headshots = r.u16();
+    if (highScore === undefined) return null;
+    entries.push({ name, highScore, totalKills, headshots });
+  }
+  return { entries };
 }
 
 // --- Client encoders for auth ---

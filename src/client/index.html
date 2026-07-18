@@ -14,6 +14,7 @@
   <div id="menu" class="overlay center-overlay">
     <div class="panel">
       <h1 class="title">slither<span>.clone</span></h1>
+      <canvas id="wormCanvas" width="300" height="60"></canvas>
       <p class="subtitle">a slither.io–style game</p>
 
       <label class="field">
@@ -26,12 +27,12 @@
         <button id="skinsBtn" class="btn">Skins</button>
         <button id="loginBtn" class="btn accent">Login</button>
         <button id="profileBtn" class="btn accent hidden">Profile</button>
+        <button id="alltimeBtn" class="btn">Leaderboard</button>
       </div>
 
       <div class="hint">
         <div><b>Mouse</b> to steer &nbsp;·&nbsp; <b>Click / Space</b> to boost</div>
         <div><b>Q</b> auto-spin &nbsp;·&nbsp; <b>G</b> low graphics</div>
-        <div><b>F2</b> admin panel (password: 9123049)</div>
       </div>
     </div>
   </div>
@@ -114,6 +115,20 @@
       <canvas id="skinPreview" width="240" height="100"></canvas>
       <div id="skinPickerFull" class="skin-picker-full"></div>
       <button id="skinsBackBtn" class="btn">Back</button>
+    </div>
+  </div>
+
+  <!-- ===== All-Time Leaderboard ===== -->
+  <div id="alltimeScreen" class="overlay center-overlay hidden">
+    <div class="panel alltime-panel">
+      <h1 class="title">Leaderboard</h1>
+      <p class="subtitle">All-time top players</p>
+      <div class="alltime-tabs">
+        <button class="btn tab-btn active" data-tab="score">Top Score</button>
+        <button class="btn tab-btn" data-tab="kills">Top Kills</button>
+      </div>
+      <div id="alltimeList" class="alltime-list"></div>
+      <button id="alltimeBackBtn" class="btn">Back</button>
     </div>
   </div>
 

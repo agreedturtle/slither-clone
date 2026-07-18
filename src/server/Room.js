@@ -25,6 +25,7 @@ import {
   encodeDeath, encodeRemoveSnake, encodeWelcome, encodePong, encodeError,
   encodeRadar, encodeAdminAck, encodeMultiplier,
   encodePowerupAdd, encodePowerupRemove, encodeHeadshot, encodeChat, encodeKillFeed,
+  encodeLeaderboardAlltime,
 } from '../shared/protocol.js';
 import { ADMIN } from '../shared/protocol.js';
 
@@ -411,22 +412,26 @@ export class Room {
       this.db.recordDeath(snake.playerRef.username, snake.score);
     }
 
-    // Track stats: kill for the killer
-    if (this.db && killer && killer.playerRef && killer.playerRef.username) {
-      // Headshot = killer's head hit victim's head area
+    // Track stats: kill for the killer (if logged in)
+    const isHeadshot = !!(killer && killer.playerRef && killer.playerRef.username);
+    let headDist = 0;
+    if (killer) {
       const dx = killer.headX - snake.headX;
       const dy = killer.headY - snake.headY;
-      const headDist = Math.sqrt(dx * dx + dy * dy);
-      const isHeadshot = headDist < (killer.bodyRadius + snake.bodyRadius);
-      this.db.recordKill(killer.playerRef.username, isHeadshot);
-      // Broadcast kill feed to all players
-      const killerName = killer.playerRef.username || 'bot';
-      const victimName = snake.playerRef ? snake.playerRef.username || 'bot' : 'bot';
-      const feedPacket = encodeKillFeed(killerName, victimName, isHeadshot);
-      for (const p of this._players.values()) {
-        if (p.send) {
-          try { p.send(feedPacket); } catch (_) {}
-        }
+      headDist = Math.sqrt(dx * dx + dy * dy);
+    }
+    const killerIsHeadshot = killer && headDist < (killer.bodyRadius + snake.bodyRadius);
+    if (this.db && killer && killer.playerRef && killer.playerRef.username) {
+      this.db.recordKill(killer.playerRef.username, killerIsHeadshot);
+    }
+
+    // Broadcast kill feed to all players
+    const killerName = killer ? (killer.playerRef ? killer.playerRef.username || killer.botRef?.name || 'bot' : 'bot') : 'world';
+    const victimName = snake.playerRef ? snake.playerRef.username || snake.name || 'bot' : snake.name || 'bot';
+    const feedPacket = encodeKillFeed(killerName, victimName, killerIsHeadshot);
+    for (const p of this._players.values()) {
+      if (p.send) {
+        try { p.send(feedPacket); } catch (_) {}
       }
     }
 
@@ -658,6 +663,12 @@ export class Room {
         try { p.send(packet); } catch (_) {}
       }
     }
+  }
+
+  handleLeaderboardAlltime(player) {
+    if (!this.db) return;
+    const top = this.db.getLeaderboard();
+    try { player.send(encodeLeaderboardAlltime(top)); } catch (_) {}
   }
 
   handleAdmin(player, msg) {

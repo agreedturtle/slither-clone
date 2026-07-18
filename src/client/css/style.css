@@ -964,3 +964,123 @@ option {
   from { opacity: 1; }
   to { opacity: 0; transform: translateX(-50%) translateY(-20px); }
 }
+
+/* =============================================
+   Main menu wiggling worm canvas
+   ============================================= */
+#wormCanvas {
+  display: block;
+  margin: 0 auto 12px;
+  border-radius: var(--radius-sm);
+}
+
+/* =============================================
+   All-Time Leaderboard
+   ============================================= */
+.alltime-panel {
+  width: 420px;
+  max-height: 80vh;
+  display: flex;
+  flex-direction: column;
+}
+.alltime-tabs {
+  display: flex;
+  gap: 0;
+  margin-bottom: 12px;
+}
+.alltime-tabs .tab-btn {
+  flex: 1;
+  margin: 0;
+  border-radius: 0;
+  font-size: 13px;
+  padding: 9px;
+  background: var(--surface);
+  color: var(--text-dim);
+  border: 1px solid var(--border);
+}
+.alltime-tabs .tab-btn:first-child { border-radius: var(--radius-sm) 0 0 var(--radius-sm); }
+.alltime-tabs .tab-btn:last-child { border-radius: 0 var(--radius-sm) var(--radius-sm) 0; }
+.alltime-tabs .tab-btn.active {
+  background: var(--green-dim);
+  color: var(--green);
+  border-color: rgba(110, 232, 74, 0.3);
+  font-weight: 700;
+}
+
+.alltime-list {
+  flex: 1;
+  overflow-y: auto;
+  max-height: 400px;
+  margin-bottom: 12px;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border) transparent;
+}
+.alltime-list::-webkit-scrollbar { width: 6px; }
+.alltime-list::-webkit-scrollbar-track { background: transparent; }
+.alltime-list::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+.alltime-row {
+  display: flex;
+  align-items: center;
+  padding: 8px 12px;
+  border-radius: var(--radius-xs);
+  margin-bottom: 2px;
+  transition: background 0.15s;
+  gap: 10px;
+}
+.alltime-row:hover { background: rgba(110, 232, 74, 0.06); }
+.alltime-row.me { background: rgba(34, 211, 238, 0.1); border: 1px solid rgba(34, 211, 238, 0.2); }
+
+.alltime-rank {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-muted);
+  min-width: 28px;
+  text-align: center;
+}
+.alltime-row:nth-child(1) .alltime-rank { color: #ffd700; text-shadow: 0 0 8px rgba(255,215,0,0.4); }
+.alltime-row:nth-child(2) .alltime-rank { color: #c0c0c0; }
+.alltime-row:nth-child(3) .alltime-rank { color: #cd7f32; }
+
+.alltime-name {
+  flex: 1;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+  text-align: left;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.alltime-val {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--green);
+  min-width: 60px;
+  text-align: right;
+}
+.alltime-val.kills { color: var(--red); }
+.alltime-val.headshots { color: var(--gold); }
+
+.alltime-empty {
+  color: var(--text-muted);
+  font-size: 13px;
+  padding: 24px;
+  text-align: center;
+}
+
+/* =============================================
+   Improved main menu styling
+   ============================================= */
+#menu .panel {
+  border-color: rgba(110, 232, 74, 0.15);
+  box-shadow:
+    0 24px 80px rgba(0,0,0,0.55),
+    0 0 40px rgba(110, 232, 74, 0.06),
+    inset 0 1px 0 rgba(255,255,255,0.06);
+}
+#menu .title {
+  font-size: 44px;
+  margin-bottom: 0;
+}
