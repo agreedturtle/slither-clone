@@ -807,6 +807,41 @@ export class Room {
         player.send(encodeAdminAck(true, `Magnet for ${secs}s`));
         break;
       }
+      case ADMIN.GIVE_SPEED: {
+        if (!player.snake || player.snake.dead) {
+          player.send(encodeAdminAck(false, 'Not alive'));
+          return;
+        }
+        const secs = arg1 || 40;
+        player.snake.addSpeed(secs);
+        player.send(encodeAdminAck(true, `Speed for ${secs}s`));
+        break;
+      }
+      case ADMIN.GIVE_ZOOM: {
+        if (!player.snake || player.snake.dead) {
+          player.send(encodeAdminAck(false, 'Not alive'));
+          return;
+        }
+        const secs = arg1 || 50;
+        player.snake.addZoom(secs);
+        player.send(encodeAdminAck(true, `Zoom for ${secs}s`));
+        break;
+      }
+      case ADMIN.GIVE_ALL_BOOSTERS: {
+        if (!player.snake || player.snake.dead) {
+          player.send(encodeAdminAck(false, 'Not alive'));
+          return;
+        }
+        const mult = arg1 || 2;
+        const durations = { 2: 60, 5: 35, 10: 20 };
+        const multSecs = durations[mult] || 60;
+        player.snake.addBooster(mult, multSecs);
+        player.snake.addMagnet(40);
+        player.snake.addSpeed(40);
+        player.snake.addZoom(50);
+        player.send(encodeAdminAck(true, `All boosters: ${mult}x + MAG + SPD + ZOOM`));
+        break;
+      }
       default:
         player.send(encodeAdminAck(false, `Unknown command: ${cmd}`));
     }

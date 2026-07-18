@@ -45,6 +45,9 @@ export const ADMIN = {
   SPAWN_BOTS_MASS: 12, // count:u8, mass:u16
   GIVE_MULTIPLIER: 13, // mult:u8 (2, 5, or 10)
   GIVE_MAGNET: 14,     // durationSec:u16 (default 40)
+  GIVE_SPEED: 15,      // durationSec:u16 (default 40)
+  GIVE_ZOOM: 16,       // durationSec:u16 (default 50)
+  GIVE_ALL_BOOSTERS: 17, //
 };
 
 // --- Server -> Client opcodes ---------------------------------------------

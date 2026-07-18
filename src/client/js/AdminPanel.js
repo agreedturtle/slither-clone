@@ -128,8 +128,17 @@ export class AdminPanel {
         this._send(ADMIN.GIVE_MULTIPLIER, mult);
         break;
       }
-      case 'GIVE_MAGNET': {
-        this._send(ADMIN.GIVE_MAGNET, 40);
+      case 'GIVE_SPEED': {
+        this._send(ADMIN.GIVE_SPEED, 40);
+        break;
+      }
+      case 'GIVE_ZOOM': {
+        this._send(ADMIN.GIVE_ZOOM, 50);
+        break;
+      }
+      case 'GIVE_ALL_BOOSTERS': {
+        const mult = parseInt(document.getElementById('adminMultVal').value) || 2;
+        this._send(ADMIN.GIVE_ALL_BOOSTERS, mult);
         break;
       }
     }
