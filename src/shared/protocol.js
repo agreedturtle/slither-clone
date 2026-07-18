@@ -306,6 +306,8 @@ export function encodeSnapshot(tick, snakes) {
     w.str(s.name);
     w.u16(s.effectiveMultiplier || 1);
     w.u16(s.magnetTicks || 0);
+    w.u16(s.speedTicks || 0);
+    w.u16(s.zoomTicks || 0);
     w.u8(boosterEntries.length);
     for (const [mult, ticks] of boosterEntries) {
       w.u8(mult).u16(ticks);
@@ -337,6 +339,8 @@ export function decodeSnapshot(r) {
     const name = r.str();
     const effectiveMultiplier = r.u16();
     const magnetTicks = r.u16();
+    const speedTicks = r.u16();
+    const zoomTicks = r.u16();
     const boosterCount = r.u8();
     const boosters = [];
     for (let j = 0; j < boosterCount; j++) {
@@ -355,6 +359,8 @@ export function decodeSnapshot(r) {
       boosting: (flags & 1) === 1, invuln: (flags & 2) === 2,
       effectiveMultiplier: effectiveMultiplier || 1,
       magnetTicks: magnetTicks || 0,
+      speedTicks: speedTicks || 0,
+      zoomTicks: zoomTicks || 0,
       boosters,
     });
   }
@@ -518,7 +524,9 @@ export function encodePowerupAdd(items) {
   const w = new Writer(8 + items.length * 10);
   w.op(S2C.POWERUP_ADD).u16(items.length);
   for (const p of items) {
-    w.u32(p.id >>> 0).f32(p.x).f32(p.y).u8(p.mult).u8(p.type === 'magnet' ? 1 : 0);
+    w.u32(p.id >>> 0).f32(p.x).f32(p.y).u8(p.mult);
+    const typeMap = { magnet: 1, speed: 2, zoom: 3 };
+    w.u8(typeMap[p.type] || 0);
   }
   return w.toUint8();
 }
@@ -530,7 +538,8 @@ export function decodePowerupAdd(r) {
   for (let i = 0; i < count; i++) {
     const id = r.u32(), x = r.f32(), y = r.f32(), mult = r.u8(), isMagnet = r.u8();
     if (mult === undefined) return null;
-    items.push({ id, x, y, mult, type: isMagnet ? 'magnet' : 'mult' });
+    const typeMap = { 0: 'mult', 1: 'magnet', 2: 'speed', 3: 'zoom' };
+    items.push({ id, x, y, mult, type: typeMap[isMagnet] || 'mult' });
   }
   return { items };
 }

@@ -305,6 +305,10 @@ export class Room {
           if (eaten) {
             if (eaten.type === 'magnet') {
               s.addMagnet(40);
+            } else if (eaten.type === 'speed') {
+              s.addSpeed(40);
+            } else if (eaten.type === 'zoom') {
+              s.addZoom(50);
             } else {
               const durations = { 2: 60, 5: 35, 10: 20 };
               const secs = durations[eaten.mult] || 60;

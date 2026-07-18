@@ -33,8 +33,11 @@ export class Game {
       alive: false,
       score: 0,
       boosting: false,
-      multiplier: 0,        // effective multiplier (product of all active boosters)
-      boosters: [],         // [[mult, ticks], ...] active booster list
+      multiplier: 0,
+      boosters: [],
+      magnetTicks: 0,
+      speedTicks: 0,
+      zoomTicks: 0,
     };
 
     this.lastFrame = performance.now();
@@ -117,6 +120,8 @@ export class Game {
         invuln: s.invuln,
         effectiveMultiplier: s.effectiveMultiplier,
         magnetTicks: s.magnetTicks,
+        speedTicks: s.speedTicks,
+        zoomTicks: s.zoomTicks,
         boosters: s.boosters,
       };
       this.state.snakes.set(s.id, entry);
@@ -134,6 +139,8 @@ export class Game {
       this.state.boosting = me.boosting;
       this.state.multiplier = me.effectiveMultiplier || 1;
       this.state.magnetTicks = me.magnetTicks || 0;
+      this.state.speedTicks = me.speedTicks || 0;
+      this.state.zoomTicks = me.zoomTicks || 0;
       this.state.boosters = me.boosters || [];
       this.hud.setScore(me.score);
     }
@@ -233,7 +240,9 @@ export class Game {
       }
     } else if (meNow && meNow.renderPts.length >= 2) {
       this.camera.follow(meNow.renderPts[0], meNow.renderPts[1]);
-      this.camera.setZoom(zoomFromScore(meNow.score));
+      let zoom = zoomFromScore(meNow.score);
+      if (meNow.zoomTicks > 0) zoom *= 2;
+      this.camera.setZoom(zoom);
       this.hud.setBoost(meNow.boosting);
     }
     // else: snake not yet in map (brief moment after join), keep camera where it is.
@@ -242,7 +251,7 @@ export class Game {
     this.renderer.draw(this.state, this.camera);
     this.hud.setCameraView(this.camera.viewBounds());
     this.hud.drawMinimap(this.state.radar, this.state.myId);
-    this.hud.drawMultiplier(this.state.multiplier, this.state.boosters, this.state.magnetTicks);
+    this.hud.drawMultiplier(this.state.multiplier, this.state.boosters, this.state.magnetTicks, this.state.speedTicks, this.state.zoomTicks);
 
     requestAnimationFrame((t) => this._loop(t));
   }

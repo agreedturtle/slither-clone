@@ -39,7 +39,9 @@ export class Snake {
 
     // Food multiplier boosters: Map<mult, ticksRemaining>. Effective mult = product of all keys.
     this.boosters = new Map();
-    this.magnetTicks = 0; // ticks remaining on magnet (increased food pickup range)
+    this.magnetTicks = 0;
+    this.speedTicks = 0;
+    this.zoomTicks = 0;
 
     // Path ring buffer of recent head samples (units of raw travel, not the
     // visual point spacing). Grows dynamically as the snake gets bigger.
@@ -99,7 +101,8 @@ export class Snake {
 
     // 2) Determine speed.
     const boosting = this.canBoost();
-    const speed = boosting ? CONFIG.BOOST_SPEED : CONFIG.BASE_SPEED;
+    let speed = boosting ? CONFIG.BOOST_SPEED : CONFIG.BASE_SPEED;
+    if (boosting && this.speedTicks > 0) speed *= 1.3;
 
     // 3) Step head.
     const nx = this.samples[this.samples.length - 2] + Math.cos(this.angle) * speed;
@@ -138,8 +141,10 @@ export class Snake {
       else this.boosters.set(mult, ticks - 1);
     }
 
-    // 6) Tick down magnet.
+    // 6) Tick down magnet, speed, zoom.
     if (this.magnetTicks > 0) this.magnetTicks--;
+    if (this.speedTicks > 0) this.speedTicks--;
+    if (this.zoomTicks > 0) this.zoomTicks--;
 
     this._bodyDirty = true;
   }
@@ -166,6 +171,16 @@ export class Snake {
   addMagnet(durationSec) {
     const ticks = durationSec * CONFIG.TICK_HZ;
     this.magnetTicks = Math.max(this.magnetTicks, ticks);
+  }
+
+  addSpeed(durationSec) {
+    const ticks = durationSec * CONFIG.TICK_HZ;
+    this.speedTicks = Math.max(this.speedTicks, ticks);
+  }
+
+  addZoom(durationSec) {
+    const ticks = durationSec * CONFIG.TICK_HZ;
+    this.zoomTicks = Math.max(this.zoomTicks, ticks);
   }
 
   get hasMagnet() { return this.magnetTicks > 0; }

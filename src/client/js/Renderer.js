@@ -176,7 +176,7 @@ export class Renderer {
   _drawPowerups(ctx, state, cam) {
     if (!state.powerups) return;
     const scale = cam.zoom;
-    const colors = { 2: '#51cf66', 5: '#ff6b6b', 10: '#ffd43b', magnet: '#4dabf7' };
+    const colors = { 2: '#51cf66', 5: '#ff6b6b', 10: '#ffd43b', magnet: '#4dabf7', speed: '#ff922b', zoom: '#cc5de8' };
     for (const pup of state.powerups.values()) {
       const p = cam.worldToScreen(pup.x, pup.y);
       const r = CONFIG.POWERUP_RADIUS * scale;
@@ -196,13 +196,16 @@ export class Renderer {
       ctx.beginPath();
       ctx.arc(p.x, py + r * 0.2, r * 0.85, 0, Math.PI * 2);
       ctx.fill();
-      // liquid fill
+      // liquid fill (full bottle)
       ctx.fillStyle = col;
       ctx.globalAlpha = 0.85;
       ctx.beginPath();
-      ctx.arc(p.x, py + r * 0.3, r * 0.6, 0, Math.PI);
+      ctx.arc(p.x, py + r * 0.2, r * 0.78, 0, Math.PI);
       ctx.fill();
-      ctx.fillRect(p.x - r * 0.6, py + r * 0.3, r * 1.2, r * 0.3);
+      ctx.fillRect(p.x - r * 0.78, py + r * 0.2, r * 1.56, r * 0.55);
+      ctx.beginPath();
+      ctx.arc(p.x, py + r * 0.75, r * 0.78, Math.PI, 0);
+      ctx.fill();
       ctx.globalAlpha = 1;
       // neck
       ctx.fillStyle = 'rgba(255,255,255,0.2)';
@@ -220,7 +223,7 @@ export class Renderer {
       ctx.font = `bold ${Math.max(9, r * 0.65)}px sans-serif`;
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
-      const label = pup.type === 'magnet' ? 'M' : (pup.mult + 'x');
+      const label = pup.type === 'magnet' ? 'M' : pup.type === 'speed' ? 'S' : pup.type === 'zoom' ? 'Z' : (pup.mult + 'x');
       ctx.fillText(label, p.x, py + r * 0.35);
     }
     ctx.globalAlpha = 1;

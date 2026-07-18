@@ -130,8 +130,8 @@ export class Food {
   spawnPowerup() {
     if (this.powerups.size >= CONFIG.POWERUP_SPAWN_MAX) return null;
     const p = randInDisk(CONFIG.WORLD_RADIUS * 0.95);
-    // Pool: 2x(3), 5x(2), 10x(1), magnet(2)
-    const pool = [2, 2, 2, 5, 5, 10, 'magnet', 'magnet'];
+    // Pool: 2x(3), 5x(2), 10x(1), magnet(2), speed(2), zoom(1)
+    const pool = [2, 2, 2, 5, 5, 10, 'magnet', 'magnet', 'speed', 'speed', 'zoom'];
     const type = pool[(Math.random() * pool.length) | 0];
     const powerup = {
       id: this._newId(),

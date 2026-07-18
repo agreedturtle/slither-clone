@@ -111,21 +111,22 @@ export class Hud {
 
   // Draw multiplier info: inline badge next to length + right-side detail panel.
   // boosters: [[mult, ticks], ...], effectiveMult: total product, magnetTicks: remaining
-  drawMultiplier(effectiveMult, boosters, magnetTicks) {
+  drawMultiplier(effectiveMult, boosters, magnetTicks, speedTicks, zoomTicks) {
     const hasMult = effectiveMult > 1;
     const hasMagnet = magnetTicks > 0;
+    const hasSpeed = speedTicks > 0;
+    const hasZoom = zoomTicks > 0;
 
-    // Right-side detail panel
     if (!this._boostPanel) {
       this._boostPanel = document.createElement('div');
       this._boostPanel.style.cssText = 'position:fixed;display:flex;flex-direction:column;gap:6px;' +
         'pointer-events:none;z-index:20;transition:opacity 0.3s ease;opacity:0;' +
         'font-family:Inter,-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif;' +
-        'top:56px;left:200px;';
+        'top:56px;left:16px;';
       document.body.appendChild(this._boostPanel);
     }
     const BOOST_COLORS = { 2: '#6ee84a', 5: '#f87171', 10: '#fbbf24' };
-    const hasAny = (boosters && boosters.length > 0) || hasMagnet;
+    const hasAny = (boosters && boosters.length > 0) || hasMagnet || hasSpeed || hasZoom;
     if (hasAny) {
       let html = '';
       if (hasMagnet) {
@@ -134,6 +135,22 @@ export class Hud {
           `padding:6px 14px;display:flex;align-items:center;gap:8px;white-space:nowrap;` +
           `backdrop-filter:blur(12px);box-shadow:0 4px 16px rgba(0,0,0,0.3);">` +
           `<span style="color:#22d3ee;font:bold 17px Inter,sans-serif;">MAG</span>` +
+          `<span style="color:#94a3b8;font:600 13px Inter,sans-serif;">${secs}s</span></div>`;
+      }
+      if (hasSpeed) {
+        const secs = Math.ceil(speedTicks / 20);
+        html += `<div style="background:rgba(8,14,26,0.82);border:1px solid rgba(255,146,43,0.35);border-radius:8px;` +
+          `padding:6px 14px;display:flex;align-items:center;gap:8px;white-space:nowrap;` +
+          `backdrop-filter:blur(12px);box-shadow:0 4px 16px rgba(0,0,0,0.3);">` +
+          `<span style="color:#ff922b;font:bold 17px Inter,sans-serif;">SPD</span>` +
+          `<span style="color:#94a3b8;font:600 13px Inter,sans-serif;">${secs}s</span></div>`;
+      }
+      if (hasZoom) {
+        const secs = Math.ceil(zoomTicks / 20);
+        html += `<div style="background:rgba(8,14,26,0.82);border:1px solid rgba(204,93,232,0.35);border-radius:8px;` +
+          `padding:6px 14px;display:flex;align-items:center;gap:8px;white-space:nowrap;` +
+          `backdrop-filter:blur(12px);box-shadow:0 4px 16px rgba(0,0,0,0.3);">` +
+          `<span style="color:#cc5de8;font:bold 17px Inter,sans-serif;">ZOOM</span>` +
           `<span style="color:#94a3b8;font:600 13px Inter,sans-serif;">${secs}s</span></div>`;
       }
       if (boosters) {
