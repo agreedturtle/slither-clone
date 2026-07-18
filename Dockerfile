@@ -4,6 +4,5 @@ COPY package.json package-lock.json ./
 RUN npm ci --omit=dev
 COPY src/ ./src/
 RUN mkdir -p /app/data
-VOLUME /app/data
 EXPOSE 3000
 CMD ["node", "src/server/server.js"]
