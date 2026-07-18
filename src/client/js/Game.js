@@ -174,15 +174,23 @@ export class Game {
   }
 
   _onFoodRemove(ids) {
-    // Capture food position for eat animation before deleting.
-    if (this.state.alive) {
+    // Only create eat particles for food near OUR head (food we personally ate).
+    const me = this.state.snakes.get(this.state.myId);
+    if (this.state.alive && me && me.renderPts && me.renderPts.length >= 2) {
+      const hx = me.renderPts[0], hy = me.renderPts[1];
+      const eatR = (me.score > 0 ? 20 + Math.sqrt(me.score) * 0.7 : 30);
+      const eatR2 = eatR * eatR;
       for (const id of ids) {
         const f = this.state.food.get(id);
         if (f) {
-          this._eatParticles.push({
-            x: f.x, y: f.y, tx: 0, ty: 0,
-            colorIdx: f.colorIdx, born: performance.now(), dur: 280,
-          });
+          const dx = f.x - hx, dy = f.y - hy;
+          if (dx * dx + dy * dy < eatR2) {
+            this._eatParticles.push({
+              x: f.x, y: f.y, sx: f.x, sy: f.y,
+              tx: hx, ty: hy,
+              colorIdx: f.colorIdx, born: performance.now(), dur: 220,
+            });
+          }
         }
       }
     }
@@ -262,9 +270,9 @@ export class Game {
     if (!this.state.alive && this._deathPos) {
       // Dead — hold camera at the death spot so the world stays visible.
       this.camera.follow(this._deathPos.x, this._deathPos.y);
-      // Advance death fade (0 -> 0.7 over 2 seconds).
-      if (this._deathAlpha < 0.7) {
-        this._deathAlpha = Math.min(0.7, this._deathAlpha + dt * 0.00035);
+      // Advance death fade (0 -> 0.3 over 2 seconds — subtle dim, not blackout).
+      if (this._deathAlpha < 0.3) {
+        this._deathAlpha = Math.min(0.3, this._deathAlpha + dt * 0.00015);
       }
       // Show death screen after 3-second delay.
       if (!this._deathScreenShown && performance.now() - this._deathTime >= 3000) {
@@ -290,8 +298,10 @@ export class Game {
       p.tx = headX; p.ty = headY;
       const t = Math.min((nowMs - p.born) / p.dur, 1);
       if (t >= 1) { ep.splice(i, 1); continue; }
-      p.x = p.x + (p.tx - p.x) * (t * t * 3); // ease-in
-      p.y = p.y + (p.ty - p.y) * (t * t * 3);
+      // Ease-in: accelerates toward head
+      const ease = t * t;
+      p.x = p.sx + (p.tx - p.sx) * ease;
+      p.y = p.sy + (p.ty - p.sy) * ease;
     }
 
     // 5) Render.
