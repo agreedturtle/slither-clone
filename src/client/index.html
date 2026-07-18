@@ -94,55 +94,62 @@
     </div>
     <label class="admin-field">
       <span>Password</span>
-      <input id="adminPassword" type="password" value="9123049" />
+      <div class="admin-pwd-row">
+        <input id="adminPassword" type="password" placeholder="enter password" />
+        <button id="adminUnlockBtn" class="admin-btn accent">Unlock</button>
+      </div>
     </label>
-    <div class="admin-section">
-      <span class="admin-section-title">Mass</span>
-      <div class="admin-row">
-        <input id="adminMassAmt" type="number" value="100" />
-        <button class="admin-btn" data-cmd="GIVE_MASS_SELF">Give Self</button>
-        <button class="admin-btn" data-cmd="GIVE_MASS_ALL">Give All</button>
+    <div id="adminFeatures" class="admin-features hidden">
+      <div class="admin-section">
+        <span class="admin-section-title">Mass</span>
+        <div class="admin-row">
+          <input id="adminMassAmt" type="number" value="100" />
+          <button class="admin-btn" data-cmd="GIVE_MASS_SELF">Give Self</button>
+          <button class="admin-btn" data-cmd="GIVE_MASS_ALL">Give All</button>
+        </div>
+      </div>
+      <div class="admin-section">
+        <span class="admin-section-title">Bots</span>
+        <div class="admin-row">
+          <input id="adminBotCount" type="number" value="5" />
+          <input id="adminBotMass" type="number" value="0" />
+          <button class="admin-btn" data-cmd="SPAWN_BOTS_MASS">Spawn</button>
+        </div>
+        <div class="admin-row">
+          <input id="adminBotTarget" type="number" value="28" />
+          <button class="admin-btn" data-cmd="SET_BOT_TARGET">Set Target</button>
+        </div>
+      </div>
+      <div class="admin-section">
+        <span class="admin-section-title">Self</span>
+        <div class="admin-row">
+          <button class="admin-btn accent" data-cmd="GOD_MODE">God Mode</button>
+          <button class="admin-btn" data-cmd="SHRINK">Shrink (0)</button>
+        </div>
+        <div class="admin-row">
+          <input id="adminShrinkScore" type="number" value="0" />
+          <button class="admin-btn" data-cmd="SHRINK_CUSTOM">Set Score</button>
+        </div>
+        <div class="admin-row">
+          <select id="adminMultVal">
+            <option value="2">2x (60s)</option>
+            <option value="5">5x (35s)</option>
+            <option value="10">10x (20s)</option>
+          </select>
+          <button class="admin-btn accent" data-cmd="GIVE_MULTIPLIER">Give Multiplier</button>
+          <button class="admin-btn accent" data-cmd="GIVE_MAGNET">Give Magnet (40s)</button>
+        </div>
+      </div>
+      <div class="admin-section">
+        <span class="admin-section-title">World</span>
+        <div class="admin-row">
+          <button class="admin-btn danger" data-cmd="KILL_ALL">Kill All</button>
+          <button class="admin-btn" data-cmd="CLEAR_FOOD">Clear Food</button>
+          <button class="admin-btn" data-cmd="REFILL_FOOD">Refill Food</button>
+        </div>
       </div>
     </div>
-    <div class="admin-section">
-      <span class="admin-section-title">Bots</span>
-      <div class="admin-row">
-        <input id="adminBotCount" type="number" value="5" />
-        <input id="adminBotMass" type="number" value="0" />
-        <button class="admin-btn" data-cmd="SPAWN_BOTS_MASS">Spawn</button>
-      </div>
-      <div class="admin-row">
-        <input id="adminBotTarget" type="number" value="28" />
-        <button class="admin-btn" data-cmd="SET_BOT_TARGET">Set Target</button>
-      </div>
-    </div>
-    <div class="admin-section">
-      <span class="admin-section-title">Self</span>
-      <div class="admin-row">
-        <button class="admin-btn accent" data-cmd="GOD_MODE">God Mode</button>
-        <button class="admin-btn" data-cmd="SHRINK">Shrink (0)</button>
-      </div>
-      <div class="admin-row">
-        <input id="adminShrinkScore" type="number" value="0" />
-        <button class="admin-btn" data-cmd="SHRINK_CUSTOM">Set Score</button>
-      </div>
-      <div class="admin-row">
-        <select id="adminMultVal">
-          <option value="2">2x (60s)</option>
-          <option value="5">5x (35s)</option>
-          <option value="10">10x (20s)</option>
-        </select>
-        <button class="admin-btn accent" data-cmd="GIVE_MULTIPLIER">Give Multiplier</button>
-        <button class="admin-btn accent" data-cmd="GIVE_MAGNET">Give Magnet (40s)</button>
-      </div>
-    </div>
-    <div class="admin-section">
-      <span class="admin-section-title">World</span>
-      <div class="admin-row">
-        <button class="admin-btn danger" data-cmd="KILL_ALL">Kill All</button>
-        <button class="admin-btn" data-cmd="CLEAR_FOOD">Clear Food</button>
-        <button class="admin-btn" data-cmd="REFILL_FOOD">Refill Food</button>
-      </div>
+  </div>
     </div>
   </div>
 

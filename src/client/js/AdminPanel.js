@@ -8,8 +8,11 @@ export class AdminPanel {
   constructor(net) {
     this.net = net;
     this.visible = false;
+    this.unlocked = false;
     this.el = document.getElementById('adminPanel');
     this.passwordEl = document.getElementById('adminPassword');
+    this.featuresEl = document.getElementById('adminFeatures');
+    this.unlockBtn = document.getElementById('adminUnlockBtn');
 
     this._bindButtons();
   }
@@ -17,10 +20,15 @@ export class AdminPanel {
   toggle() {
     this.visible = !this.visible;
     this.el.classList.toggle('hidden', !this.visible);
+    if (!this.visible) {
+      this.unlocked = false;
+      this.featuresEl.classList.add('hidden');
+      this.passwordEl.value = '';
+    }
   }
 
   _pwd() {
-    return this.passwordEl.value || '9123049';
+    return this.passwordEl.value || '';
   }
 
   _send(cmd, arg1 = 0, arg2 = 0) {
@@ -28,11 +36,28 @@ export class AdminPanel {
   }
 
   _bindButtons() {
+    this.unlockBtn.addEventListener('click', () => this._tryUnlock());
+    this.passwordEl.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') this._tryUnlock();
+    });
     this.el.addEventListener('click', (e) => {
       const btn = e.target.closest('.admin-btn');
-      if (!btn) return;
+      if (!btn || btn === this.unlockBtn) return;
       this._handleCmd(btn.dataset.cmd);
     });
+  }
+
+  _tryUnlock() {
+    if (this._pwd() === '9123049') {
+      this.unlocked = true;
+      this.featuresEl.classList.remove('hidden');
+      this.unlockBtn.textContent = 'Unlocked';
+      this.unlockBtn.disabled = true;
+    } else {
+      this.unlockBtn.textContent = 'Wrong';
+      this.passwordEl.value = '';
+      setTimeout(() => { this.unlockBtn.textContent = 'Unlock'; }, 1000);
+    }
   }
 
   _handleCmd(cmd) {
