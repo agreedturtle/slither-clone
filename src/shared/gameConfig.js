@@ -24,10 +24,10 @@ export default {
   // --- Body / growth -------------------------------------------------------
   POINT_DIST: 3.5,              // visual spacing between body points
   MIN_POINTS: 12,               // smallest snake body length
-  MAX_POINTS: 30000,            // hard cap on longest snake
+  MAX_POINTS: 40000,            // hard cap on longest snake
   SCORE_PER_POINT: 2,           // score needed per extra body point
   BODY_RADIUS_MIN: 8,           // thinnest the snake can be
-  BODY_RADIUS_MAX: 120,          // thickest the snake can be
+  BODY_RADIUS_MAX: 150,          // thickest the snake can be
 
   // --- Boost ---------------------------------------------------------------
   BOOST_COST_TICKS: 3,          // lose 1 score every N ticks while boosting (must be integer)

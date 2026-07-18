@@ -311,6 +311,22 @@ export class Renderer {
     for (let i = 1; i < count; i++) ctx.lineTo(screen[i * 2], screen[i * 2 + 1]);
     ctx.stroke();
 
+    // Glow for bigger snakes.
+    if (!this.lowGraphics && bodyR > 12) {
+      ctx.save();
+      ctx.shadowColor = skin.glow;
+      ctx.shadowBlur = Math.min(30, bodyR * 0.6);
+      ctx.strokeStyle = skin.glow;
+      ctx.globalAlpha = 0.35;
+      ctx.lineWidth = lineWidth + 6;
+      ctx.beginPath();
+      ctx.moveTo(screen[0], screen[1]);
+      for (let i = 1; i < count; i++) ctx.lineTo(screen[i * 2], screen[i * 2 + 1]);
+      ctx.stroke();
+      ctx.restore();
+      ctx.globalAlpha = 1;
+    }
+
     if (isMultiColor) {
       const chunk = 6;
       for (let start = 0; start + 1 < count; start += chunk) {

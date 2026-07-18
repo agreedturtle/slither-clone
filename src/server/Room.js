@@ -283,10 +283,11 @@ export class Room {
     for (const s of this.snakes.values()) {
       if (s.dead) continue;
       const magnetBonus = s.hasMagnet ? MAGNET_RANGE : 0;
-      const r = s.bodyRadius + CONFIG.FOOD_RADIUS_DEATH + DEATH_EAT_EXTRA + 2 + magnetBonus;
+      const r = (s.bodyRadius + CONFIG.FOOD_RADIUS_DEATH + DEATH_EAT_EXTRA + 2) * 2.5 + magnetBonus;
       this._foodGrid.queryCircle(s.headX, s.headY, r, (pellet) => {
         const extra = pellet.death ? DEATH_EAT_EXTRA : 0;
-        const rr = s.bodyRadius + pellet.size + extra + magnetBonus;
+        const eatRange = pellet.death ? 2.5 : 1.5;
+        const rr = (s.bodyRadius + pellet.size + extra) * eatRange + magnetBonus;
         if (dist2(s.headX, s.headY, pellet.x, pellet.y) <= rr * rr) {
           const eaten = this.food.consume(pellet.id);
           if (eaten) {
