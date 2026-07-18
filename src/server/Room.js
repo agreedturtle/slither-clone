@@ -429,7 +429,7 @@ export class Room {
     const killerName = killer ? (killer.playerRef?.username || killer.botRef?.name || killer.name || 'bot') : 'world';
     const victimName = snake.playerRef?.username || snake.botRef?.name || snake.name || 'bot';
     const feedPacket = encodeKillFeed(killerName, victimName, killerIsHeadshot);
-    for (const p of this._players.values()) {
+    for (const p of this.players.values()) {
       if (p.send) {
         try { p.send(feedPacket); } catch (_) {}
       }
@@ -658,7 +658,7 @@ export class Room {
     const text = (msg.message || '').slice(0, 80);
     if (!text) return;
     const packet = encodeChat(name, text);
-    for (const p of this._players.values()) {
+    for (const p of this.players.values()) {
       if (p.send) {
         try { p.send(packet); } catch (_) {}
       }
