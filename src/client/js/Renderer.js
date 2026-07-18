@@ -145,11 +145,13 @@ export class Renderer {
     const pulse = 1 + Math.sin(this._frame * 0.08) * 0.06; // gentle global pulse
 
     if (this.lowGraphics) {
-      // Simplified: draw plain circles, skip off-screen, skip pulse
+      // Simplified: draw plain circles, skip off-screen, skip every other food
       const vb = cam.viewBounds();
       const pad = 20;
+      let fi = 0;
       for (const f of state.food.values()) {
         if (f.x < vb.minX - pad || f.x > vb.maxX + pad || f.y < vb.minY - pad || f.y > vb.maxY + pad) continue;
+        if (++fi & 1) continue; // skip every other food for perf
         const p = cam.worldToScreen(f.x, f.y);
         const r = Math.max(2, (f.size / 5) * 5 * scale);
         ctx.fillStyle = FOOD_COLORS[f.colorIdx] || FOOD_DEATH_COLOR;
@@ -285,9 +287,10 @@ export class Renderer {
       screen[i * 2 + 1] = p.y;
     }
 
-    const isMultiColor = skin.main === 'rainbow' || skin.main === 'combo';
-    const isSplit = skin.main === 'split';
+    const isMultiColor = !this.lowGraphics && (skin.main === 'rainbow' || skin.main === 'combo');
+    const isSplit = !this.lowGraphics && skin.main === 'split';
     const skinColors = skin.colors || RAINBOW_STOPS;
+    const skinMain = this.lowGraphics ? (skin.shade || skin.main) : skin.main;
 
     ctx.lineJoin = 'round';
     ctx.lineCap = 'round';
@@ -342,20 +345,43 @@ export class Renderer {
       }
     } else if (isSplit) {
       const cols = skin.split || ['#2255CC', '#E8D44D'];
-      ctx.strokeStyle = cols[0];
-      ctx.lineWidth = lineWidth;
-      ctx.beginPath();
-      ctx.moveTo(screen[0], screen[1]);
-      for (let i = 1; i < count; i++) ctx.lineTo(screen[i * 2], screen[i * 2 + 1]);
-      ctx.stroke();
-      ctx.strokeStyle = cols[1];
-      ctx.lineWidth = lineWidth * 0.5;
-      ctx.beginPath();
-      ctx.moveTo(screen[0], screen[1]);
-      for (let i = 1; i < count; i++) ctx.lineTo(screen[i * 2], screen[i * 2 + 1]);
-      ctx.stroke();
+      const half = lineWidth * 0.5;
+      const waveAmp = lineWidth * 0.15;
+      const waveFreq = 0.12;
+      const perps = new Float32Array(count * 2);
+      for (let i = 0; i < count; i++) {
+        let dx, dy;
+        if (i === 0) {
+          dx = screen[2] - screen[0]; dy = screen[3] - screen[1];
+        } else if (i === count - 1) {
+          dx = screen[(count - 1) * 2] - screen[(count - 2) * 2];
+          dy = screen[(count - 1) * 2 + 1] - screen[(count - 2) * 2 + 1];
+        } else {
+          dx = screen[(i + 1) * 2] - screen[(i - 1) * 2];
+          dy = screen[(i + 1) * 2 + 1] - screen[(i - 1) * 2 + 1];
+        }
+        const len = Math.sqrt(dx * dx + dy * dy) || 1;
+        perps[i * 2] = -dy / len;
+        perps[i * 2 + 1] = dx / len;
+      }
+      for (let side = 0; side < 2; side++) {
+        const dir = side === 0 ? -1 : 1;
+        ctx.fillStyle = cols[side];
+        ctx.beginPath();
+        ctx.moveTo(screen[0], screen[1]);
+        for (let i = 1; i < count; i++) ctx.lineTo(screen[i * 2], screen[i * 2 + 1]);
+        for (let i = count - 1; i >= 0; i--) {
+          const wave = Math.sin(i * waveFreq) * waveAmp;
+          ctx.lineTo(
+            screen[i * 2] + perps[i * 2] * (half + wave) * dir,
+            screen[i * 2 + 1] + perps[i * 2 + 1] * (half + wave) * dir
+          );
+        }
+        ctx.closePath();
+        ctx.fill();
+      }
     } else {
-      ctx.strokeStyle = skin.main;
+      ctx.strokeStyle = skinMain;
       ctx.lineWidth = lineWidth;
       ctx.beginPath();
       ctx.moveTo(screen[0], screen[1]);
@@ -383,8 +409,8 @@ export class Renderer {
     ctx.arc(hx, hy, bodyR, 0, Math.PI * 2);
     ctx.fill();
 
-    if (!this.lowGraphics) {
-      // Eyes — bigger with shine dots for a livelier look.
+    // Eyes — always drawn for visibility.
+    {
       const ang = count >= 2 ? Math.atan2(screen[1] - screen[3], screen[0] - screen[2]) : 0;
       const eo = bodyR * 0.48;
       const ef = bodyR * 0.30;
@@ -404,12 +430,16 @@ export class Renderer {
       ctx.beginPath(); ctx.arc(ex1 + px, ey1 + py, eyeR * 0.52, 0, Math.PI * 2); ctx.fill();
       ctx.beginPath(); ctx.arc(ex2 + px, ey2 + py, eyeR * 0.52, 0, Math.PI * 2); ctx.fill();
       // Shine dots — small white highlights for a lively, glossy look.
-      const sx = Math.cos(ang + 0.8) * eyeR * 0.25;
-      const sy = Math.sin(ang + 0.8) * eyeR * 0.25;
-      ctx.fillStyle = '#fff';
-      ctx.beginPath(); ctx.arc(ex1 - px * 0.3 + sx, ey1 - py * 0.3 + sy, eyeR * 0.18, 0, Math.PI * 2); ctx.fill();
-      ctx.beginPath(); ctx.arc(ex2 - px * 0.3 + sx, ey2 - py * 0.3 + sy, eyeR * 0.18, 0, Math.PI * 2); ctx.fill();
+      if (!this.lowGraphics) {
+        const sx = Math.cos(ang + 0.8) * eyeR * 0.25;
+        const sy = Math.sin(ang + 0.8) * eyeR * 0.25;
+        ctx.fillStyle = '#fff';
+        ctx.beginPath(); ctx.arc(ex1 - px * 0.3 + sx, ey1 - py * 0.3 + sy, eyeR * 0.18, 0, Math.PI * 2); ctx.fill();
+        ctx.beginPath(); ctx.arc(ex2 - px * 0.3 + sx, ey2 - py * 0.3 + sy, eyeR * 0.18, 0, Math.PI * 2); ctx.fill();
+      }
+    }
 
+    if (!this.lowGraphics) {
       // Name label.
       ctx.fillStyle = 'rgba(230,240,255,0.85)';
       ctx.font = '600 13px -apple-system, Segoe UI, sans-serif';
