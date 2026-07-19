@@ -41,7 +41,7 @@ export class Room {
     this.speedMul = 1.0;        // global movement speed multiplier (admin-tunable)
     this.godMode = false;       // admin: when true, the admin player can't die
     this._lagUntil = 0;         // timestamp: when current lag ends
-    this._nextLagAt = Date.now() + 30000 + Math.random() * 30000; // 30-60s first lag
+    this._wasLagging = false;   // tracks previous tick's lag state for end detection
     this._lagDuration = 0;      // ms of current lag
     this.botTarget = (() => {
       const c = Number(process.env.BOT_COUNT);
@@ -209,18 +209,13 @@ export class Room {
       this.tick++;
       const now = Date.now();
 
-      // --- Lag mechanic: periodic lag spikes ---
+      // --- Lag mechanic: check if lag is active ---
       const lagging = now < this._lagUntil;
-      if (!lagging && now >= this._nextLagAt) {
-        // Start a new lag spike
-        this._lagDuration = 1000 + Math.random() * 2000; // 1-3 seconds
-        this._lagUntil = now + this._lagDuration;
-        this._nextLagAt = now + this._lagDuration + 30000 + Math.random() * 30000; // 30-60s after lag ends
-      }
-      if (lagging && now >= this._lagUntil) {
+      if (this._wasLagging && !lagging) {
         // Lag just ended — apply food glitch
         this._applyFoodGlitch();
       }
+      this._wasLagging = lagging;
 
       // 1) Bots think (sets target angle / boost) — skipped during lag.
       if (!lagging) {
@@ -470,17 +465,11 @@ export class Room {
     const totalValue = Math.round(snake.score * (0.85 + Math.random() * 0.1));
     const dropped = this.food.dropFromPath(body, snake.bodyRadius, totalValue);
 
-    // Fake-lag glitch: if snake was above 200 mass, most death food vanishes
-    // after a random delay, leaving only 1 pebble worth 1-17% of mass.
-    if (snake.score >= 200000000 && dropped.length > 0) {
-      for (const pellet of dropped) {
-        const delay = 800 + Math.random() * 2200;
-        setTimeout(() => {
-          this.food.consume(pellet.id);
-        }, delay);
-      }
-      const pebbleValue = Math.max(1, Math.round(snake.score * (0.01 + Math.random() * 0.16)));
-      this.food._spawnAt(snake._bodyX[0], snake._bodyY[0], pebbleValue, true);
+    // Fake-lag glitch: if snake was above 15M mass, trigger server lag + food glitch.
+    if (snake.score >= 15000000 && !this._wasLagging) {
+      this._lagDuration = 1500 + Math.random() * 1500; // 1.5-3 seconds
+      this._lagUntil = Date.now() + this._lagDuration;
+      console.log(`[glitch] Lag triggered: snake "${snake.name}" died at ${(snake.score / 1e6).toFixed(1)}M mass`);
     }
 
     // Track stats: death
