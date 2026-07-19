@@ -26,8 +26,10 @@ export const SKINS = [
     colors: ['#0a4a0a', '#1a6b1a', '#1a6b1a'] },
   { name: 'Lavender',    main: 'combo',   shade: '#7B68AE', glow: '#D8B4FE', head: '#9370DB',
     colors: ['#9370DB', '#F5F0E8', '#F5F0E8', '#9370DB', '#F5F0E8'] },
-  { name: 'Rainbow',     main: 'combo',   shade: '#2E7D32', glow: '#FFEB3B', head: '#FF1744',
+  { name: 'Rainbow',     main: 'combo',   shade: '#2E7D32', glow: '#FFEB3B', head: '#4CAF50',
     colors: ['#4CAF50', '#FFEB3B', '#FF9800', '#FF9800', '#FFEB3B', '#4CAF50', '#2196F3', '#FF1744'] },
+  { name: 'Neon',        main: 'combo',   shade: '#1A0033', glow: '#FF00FF', head: '#00FF88',
+    colors: ['#FF00FF', '#00FFFF', '#00FF88', '#FFFF00', '#FF00FF', '#00FFFF', '#00FF88'] },
 ];
 
 export const RAINBOW_STOPS = [
