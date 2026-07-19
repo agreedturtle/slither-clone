@@ -10,8 +10,8 @@ export default {
   TICK_HZ: 20,                  // server ticks per second
 
   // --- World ---------------------------------------------------------------
-  WORLD_RADIUS: 8000,           // circular arena radius; leaving it = death
-  FOOD_TARGET: 10000,            // how many food pellets exist at any time
+  WORLD_RADIUS: 14000,           // circular arena radius; leaving it = death
+  FOOD_TARGET: 16400,            // how many food pellets exist at any time
 
   // --- Population ----------------------------------------------------------
   BOT_TARGET: 40,               // bots fill the world up to this count
@@ -23,7 +23,7 @@ export default {
 
   // --- Body / growth -------------------------------------------------------
   POINT_DIST: 3.5,              // visual spacing between body points
-  MIN_POINTS: 12,               // smallest snake body length
+  MIN_POINTS: 10,               // smallest snake body length
   MAX_POINTS: 40000,            // hard cap on longest snake
   SCORE_PER_POINT: 2,           // score needed per extra body point
   BODY_RADIUS_MIN: 8,           // thinnest the snake can be

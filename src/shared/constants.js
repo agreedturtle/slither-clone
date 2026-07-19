@@ -24,7 +24,7 @@ export const CONFIG = {
 
   // --- Body / growth -------------------------------------------------------
   POINT_DIST: 3.5,
-  MIN_POINTS: 12,
+  MIN_POINTS: 10,
   MAX_POINTS: 1400,
   SCORE_PER_POINT: 2,
   BODY_RADIUS_MIN: 8,

@@ -614,10 +614,10 @@ export class Room {
       if (!player.joined) continue;
       const mySnakeId = player.alive && player.snake ? player.snake.id : 0;
       const radar = all.map(s => {
-        // Sample up to 8 body points for minimap rendering
+        // Sample up to 30 body points for minimap rendering (1:1 accuracy)
         s.rebuildBodyIfNeeded();
         const bodyLen = s._bodyLen;
-        const maxMiniPts = Math.min(8, bodyLen);
+        const maxMiniPts = Math.min(30, bodyLen);
         const bodyPts = [];
         if (maxMiniPts > 1) {
           const ratio = (bodyLen - 1) / (maxMiniPts - 1);
