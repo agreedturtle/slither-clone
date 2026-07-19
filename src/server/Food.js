@@ -25,7 +25,11 @@ export class Food {
     this.grid = null;             // rebuilt per tick by Room
   }
 
-  get count() { return this.pellets.size; }
+  get count() {
+    let n = 0;
+    for (const p of this.pellets.values()) if (!p.death) n++;
+    return n;
+  }
 
   // Single source of pellet ids. Both spawn paths go through this.
   _newId() { return _nextId++; }
@@ -58,7 +62,7 @@ export class Food {
 
   // Seed the world to the target pellet count.
   seed() {
-    for (let i = this.pellets.size; i < CONFIG.FOOD_TARGET; i++) {
+    for (let i = this.count; i < CONFIG.FOOD_TARGET; i++) {
       this._spawnRandom();
     }
   }
@@ -66,7 +70,7 @@ export class Food {
   // Keep population near target; called periodically. Spawns pellets uniformly
   // across the entire arena so food is everywhere (no clustering).
   maintain() {
-    let need = CONFIG.FOOD_TARGET - this.pellets.size;
+    let need = CONFIG.FOOD_TARGET - this.count;
     if (need > 300) need = 300; // cap per call to avoid spikes
     for (let i = 0; i < need; i++) this._spawnRandom();
   }

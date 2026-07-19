@@ -231,41 +231,26 @@ export class Bot {
       return;
     }
 
-    // Chase prey if we're significantly bigger and it's close.
-    const prey = this.room.findPreyFor(s);
-    if (prey && myScore > 80) {
-      // Predict where prey is going and cut it off.
-      const predictDist = Math.sqrt(prey.d2) * 0.3;
-      const tx = prey.headX + Math.cos(prey.angle) * predictDist;
-      const ty = prey.headY + Math.sin(prey.angle) * predictDist;
-      s.setTargetAngle(Math.atan2(ty - hy, tx - hx));
-      // Boost to close distance if prey is far.
-      s.setBoost(prey.d2 > 200 * 200 && myScore > 150);
+    // If far from center, head back strongly.
+    if (distFromCenter > CONFIG.WORLD_RADIUS * 0.35) {
+      const toCenter = Math.atan2(-hy, -hx);
+      s.setTargetAngle(toCenter);
+      s.setBoost(distFromCenter > CONFIG.WORLD_RADIUS * 0.6);
       return;
     }
 
-    // Powerups.
-    const powerup = this.room.findNearestPowerup(hx, hy, 500);
-    if (powerup) {
-      s.setTargetAngle(Math.atan2(powerup.y - hy, powerup.x - hx));
-      s.setBoost(false);
-      return;
-    }
-
-    // Eat food — prefer food along path toward center.
-    const food = this.room.findNearestFood(hx, hy, 600);
+    // Near center — pick up nearby food, otherwise drift around center.
+    const food = this.room.findNearestFood(hx, hy, 350);
     if (food) {
       s.setTargetAngle(Math.atan2(food.y - hy, food.x - hx));
       s.setBoost(false);
       return;
     }
 
-    // Move toward center of the map.
+    // Chill near center: small random drift, bias back toward (0,0).
     const toCenter = Math.atan2(-hy, -hx);
-    const wander = s.angle + (Math.random() - 0.5) * 0.5;
-    s.setTargetAngle(distFromCenter > CONFIG.WORLD_RADIUS * 0.4
-      ? wrapAngle(toCenter * 0.6 + wander * 0.4)
-      : wander);
+    const wander = s.angle + (Math.random() - 0.5) * 0.4;
+    s.setTargetAngle(wrapAngle(toCenter * 0.5 + wander * 0.5));
     s.setBoost(false);
   }
 
