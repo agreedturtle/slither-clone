@@ -865,13 +865,17 @@ export class Room {
           }
         }
         const foodBefore = this.food.pellets.size;
+        // Queue ALL old food for client-side removal.
+        for (const id of this.food.pellets.keys()) {
+          this.food.removedQueue.push(id);
+        }
         this.food.pellets.clear();
-        this.food.addedQueue = [];
-        this.food.removedQueue = [];
-        for (const [, pup] of this.food.powerups) {
-          this.food.powerupRemoveQueue.push(pup.id);
+        // Queue ALL old powerups for client-side removal.
+        for (const id of this.food.powerups.keys()) {
+          this.food.powerupRemoveQueue.push(id);
         }
         this.food.powerups.clear();
+        // Seed fresh food (adds to addedQueue which gets sent next broadcast).
         this.food.seed();
         this.bots = [];
         this._respawnQueue = [];

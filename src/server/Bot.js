@@ -1,17 +1,3 @@
-// ===========================================================================
-// Bot.js — an AI-controlled Snake with a small behavior brain.
-//
-// Bots are just Snakes whose `targetAngle` / `boost` are recomputed each tick
-// by this controller. They share the authoritative simulation fully, so a bot
-// is indistinguishable from a player on the wire and in collision logic.
-//
-// Brain priorities (first match wins):
-//   1) AVOID  — imminent collision with a body or the border -> steer to open.
-//   2) FLEE   — a much larger snake's head is very close -> run.
-//   3) EAT    — drift toward the nearest food.
-//   4) CIRCLE — orbit the world center in a gentle spiral.
-// ===========================================================================
-
 import { Snake } from './Snake.js';
 import { CONFIG, bodyRadiusFromScore } from '../shared/constants.js';
 import {
@@ -62,7 +48,7 @@ const BOT_NAMES = [
   'Ice', 'Snow', 'Hail', 'Sleet', 'Rain', 'Drizzle', 'Mist', 'Fog',
   'Cloud', 'Sky', 'Star', 'Moon', 'Sun', 'Comet', 'Meteor', 'Asteroid',
   'Galaxy', 'Nebula', 'Quasar', 'Pulsar', 'BlackHole', 'Supernova', 'Photon', 'Electron',
-  'Proton', 'Neutron', 'Quark', 'Lepton', 'Boson', 'Higgs', 'W玻色子', 'Gluon',
+  'Proton', 'Neutron', 'Quark', 'Lepton', 'Boson', 'Higgs', 'Gluon',
   'Graviton', 'Tachyon', 'Neutrino', 'Carbon', 'Oxygen', 'Hydrogen', 'Helium', 'Nitrogen',
   'Lithium', 'Sodium', 'Iron', 'Copper', 'Gold', 'Silver', 'Platinum', 'Uranium',
   'Titanium', 'Nickel', 'Zinc', 'Lead', 'Mercury', 'Radon', 'Xenon', 'Neon',
@@ -78,77 +64,33 @@ const BOT_NAMES = [
   'Link', 'Zelda', 'Ganondorf', 'Navi', 'Sheik', 'Midna', 'Sonic', 'Tails',
   'Knuckles', 'Amy', 'Shadow', 'Rouge', 'Eggman', 'PacMan', 'Blinky', 'Pinky',
   'Inky', 'Clyde', 'Crash', 'Spyro', 'Sly', 'Jak', 'Ratchet', 'Clank',
-  'Daxter', 'MasterChief', 'Cortana', 'Arbiter', 'Johnson', 'Keyes', 'Geralt', 'Yennefer',
+  'Daxter', 'MasterChief', 'Cortana', 'Arbiter', 'Geralt', 'Yennefer',
   'Triss', 'Ciri', 'Dandelion', 'Zoltan', 'Kratos', 'Atreus', 'Freya', 'Mimir',
   'Baldur', 'Joel', 'Ellie', 'Abby', 'Tommy', 'Dina', 'Snake', 'Raiden',
   'Ocelot', 'BigBoss', 'VenomSnake', 'Solid', 'Liquid', 'Solidus', 'GrayFox', 'PsychoMantis',
   'NathanDrake', 'Sully', 'Elena', 'SamFisher', 'Agent47', 'LaraCroft', 'Aloy', 'Sekiro',
   'HollowKnight', 'Madeline', 'Cuphead', 'Undertale', 'Deltarune', 'Minecraft', 'Terraria', 'Roblox',
-  'Fortnite', 'Apex', 'Valorant', 'Overwatch', 'LeaugeOfLegends', 'Dota', 'CSGO', 'RainbowSix',
-  'Rust', 'AmongUs', 'FallGuys', 'RocketLeague', 'BrawlStars', 'ClashRoyale', 'ClashOfClans', 'SubwaySurfers',
-  'TempleRun', 'FlappyBird', 'Tetris', 'Minesweeper', 'Solitaire', 'Chess', 'Checkers', 'Uno',
-  'Monopoly', 'Jenga', 'Darts', 'Domino', 'Jazz', 'Blues', 'Rock', 'Metal',
-  'Punk', 'Pop', 'Soul', 'Funk', 'Disco', 'Country', 'Folk', 'Indie',
-  'Grunge', 'Techno', 'Dubstep', 'House', 'Trance', 'DrumAndBass', 'HipHop', 'Rap',
-  'RnB', 'Classical', 'Opera', 'Symphony', 'Sonata', 'Concerto', 'Mozart', 'Beethoven',
-  'Bach', 'Chopin', 'Vivaldi', 'Debussy', 'Tchaikovsky', 'Dvorak', 'Mendelssohn', 'Brahms',
-  'Liszt', 'Wagner', 'Verdi', 'Puccini', 'Rossini', 'Handel', 'Einstein', 'Newton',
-  'Tesla', 'Edison', 'Darwin', 'Hawking', 'Curie', 'Feynman', 'Bohr', 'Heisenberg',
-  'Schrödinger', 'Dirac', 'Planck', 'Maxwell', 'Lorentz', 'Boltzmann', 'Gibbs', 'Shakespeare',
-  'Hemingway', 'Twain', 'Austen', 'Dickens', 'Tolkien', 'Rowling', 'Martin', 'Asimov',
-  'Bradbury', 'Clarke', 'Herbert', 'Orwell', 'Huxley', 'Vonnegut', 'Poe', 'Lovecraft',
-  'King', 'Koontz', 'Rice', 'Red', 'Blue', 'Green', 'Yellow', 'Purple',
-  'Pink', 'Teal', 'Coral', 'Ivory', 'Jade', 'Ruby', 'Sapphire', 'Emerald',
-  'Topaz', 'Amber', 'Opal', 'Pearl', 'Onyx', 'Obsidian', 'Granite', 'Marble',
-  'Quartz', 'Crystal', 'Diamond', 'Bronze', 'Steel', 'Chrome', 'RubyRed', 'SapphireBlue',
-  'EmeraldGreen', 'DiamondWhite', 'TopazGold', 'AmberGlow', 'PearlShine', 'OnyxBlack', 'ObsidianDark', 'Zero',
-  'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight',
-  'Nine', 'Ten', 'Eleven', 'Twelve', 'Thirteen', 'Fourteen', 'Fifteen', 'Sixteen',
-  'Seventeen', 'Eighteen', 'Nineteen', 'Twenty', 'Hundred', 'Thousand', 'Infinity', 'Omega',
-  'Sigma', 'Delta', 'Theta', 'Lambda', 'Alpha', 'Beta', 'Gamma', 'Epsilon',
-  'Zeta', 'Eta', 'Iota', 'Kappa', 'Mu', 'Nu', 'Xi', 'Omicron',
-  'Pi', 'Rho', 'Tau', 'Upsilon', 'Phi', 'Chi', 'Psi', 'Monday',
-  'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday', 'January', 'February',
-  'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October',
-  'November', 'December', 'Spring', 'Summer', 'Autumn', 'Winter', 'Earthquake', 'Volcano',
-  'Tsunami', 'Avalanche', 'Landslide', 'Phoenix', 'Dragon', 'Griffin', 'Unicorn', 'Pegasus',
-  'Chimera', 'Hydra', 'Minotaur', 'Centaur', 'Cyclops', 'Medusa', 'Cerberus', 'Kraken',
-  'Leviathan', 'Behemoth', 'Manticore', 'Basilisk', 'Thunderbird', 'Garuda', 'Quetzalcoatl', 'Amphisbaena',
-  'Serpent', 'Wyvern', 'Drake', 'Lindworm', 'Ormus', 'Naga', 'Fafnir', 'Jörmungandr',
-  'Zmey', 'Tatzelwurm', 'PythonLord', 'CobraKing', 'ViperQueen', 'MambaLord', 'BoaMaster', 'EelKing',
-  'SnakeGod', 'WormLord', 'NoodleMaster', 'SlinkyKing', 'CoilLord', 'FangMaster', 'ScaleLord', 'VenomKing',
-  'HissMaster', 'SlitherPro', 'WiggleKing', 'TwistMaster', 'SquiggleLord', 'LoopKing', 'RattlerKing', 'SidewinderPro',
-  'CopperKing', 'MoccasinLord', 'PitKing', 'KeelLord', 'GarterKing', 'RacerLord', 'ToxicWorm', 'VenomousWorm',
-  'PoisonWorm', 'DeadlyWorm', 'KillerWorm', 'MegaViper', 'UltraCobra', 'HyperBoa', 'SuperEel', 'MegaNoodle',
-  'UltraSlinky', 'HyperCoil', 'SuperFang', 'MegaScale', 'UltraVenom', 'WormLord420', 'NoodleGod69', 'SnekMaster9000',
-  'DangerNoodle666', 'SlitherKing777', 'CoilGod888', 'FangMaster555', 'ViperLord333', 'ProGamer', 'NoobSlayer', 'MLGPro',
-  'TryHard', 'EZClap', 'GGWP', 'GetRekt', 'L2P', 'GetGud', 'Owned', 'Rekt',
-  'Pwned', 'N00b', 'xD', 'lol', 'bruh', 'oof', 'yeet', 'sus',
-  'cap', 'fr', 'based', 'cringe', 'sigma', 'alpha', 'chad', 'virgin',
-  'Goofy', 'Silly', 'Wacky', 'Zany', 'Bonkers', 'Loony', 'Quirky', 'Odd',
-  'Weird', 'Strange', 'Bizarre', 'Peculiar', 'Eccentric', 'Nutty', 'Dotty', 'Batty',
-  'Crackers', 'Dingus', 'Doofus', 'Dunce', 'Knucklehead', 'Bonehead', 'Meathead', 'Blockhead',
-  'Airhead', 'Egghead', 'Fathead', 'Pinhead', 'Dullard', 'NoodleHead', 'WormBrain', 'SnekBrain',
-  'CoilBrain', 'FangBrain', 'WormFace', 'SnekFace', 'CoilFace', 'FangFace', 'ScaleFace', 'TrollFace',
-  'DerpFace', 'KappaFace', 'MonkaS', 'PepeHands', 'PepeLaugh', 'Pepega', 'PogChamp', 'Poggers',
-  'KEKW', 'LUL', 'Sadge', 'Happyge', 'Copium', 'Hopium', 'Cope', 'Seethe',
-  'Mald', 'TouchGrass', 'GoOutside', 'ReadABook', 'DrinkWater', 'TakeNap', 'Speedrun', 'AnyPercent',
-  'Glitchless', 'Pacifist', 'TAS', 'Noclip', 'Debug', 'CheatCode', 'IDDQD', 'IDKFA',
-  'BigHead', 'Konami', 'UpUp', 'DownDown', 'LeftRight', 'ABBA', 'SelectStart', 'GameOver',
-  'InsertCoin', 'Continue', 'NewGame', 'LoadGame', 'SaveState', 'Checkpoint', 'Respawn', 'Revive',
-  'Heal', 'Buff', 'Nerf', 'OP', 'Broken', 'Balanced', 'Fair', 'SkillIssue',
-  'Diff', 'GG', 'WP', 'EZ', 'NoCap', 'Deadass', 'OnGod', 'FrFr',
-  'Bussin', 'Slaps', 'HitsDifferent', 'Lowkey', 'Highkey', 'LowTaper', 'Fade', 'Mullet',
-  'BuzzCut', 'Ponytail', 'Bun', 'BobCut', 'Lemonade', 'SweetTea', 'MountainDew', 'Gatorade',
-  'RedBull', 'Monster', 'Bang', 'Rockstar', 'Celsius', 'Prime', 'Sprite', 'Fanta',
-  'Pepsi', 'Cola', 'Faygo', 'Shasta', 'Pibb', 'MugRoot', 'Surge', 'Jolt',
-  'Vault', 'Josta', 'Coffee', 'Espresso', 'Latte', 'Mocha', 'Cappuccino', 'Americano',
-  'MochaMaster', 'BrewKing', 'BeanLord', 'CaffeineWorm', 'SleepyWorm', 'TiredSnek', 'NapCoil', 'DreamNoodle',
-  'SnoreFang', 'PizzaTime', 'PastaLaVista', 'TacoTuesday', 'WaffleHouse', 'IHOP', 'Denny', 'Wendys',
-  'TacoBell', 'Chipotle', 'Subway', 'McDonalds', 'BurgerKing', 'ChickFilA', 'Popeyes', 'KFC',
-  'FiveGuys', 'ShakeShack', 'InNOut', 'SonicDrive', 'Canes', 'Zaxbys', 'Bojangles', 'Hardees',
-  'CarlJr',
+  'Fortnite', 'Apex', 'Valorant', 'Overwatch', 'Dota', 'CSGO', 'RainbowSix',
+  'Rust', 'AmongUs', 'FallGuys', 'RocketLeague', 'BrawlStars', 'ClashRoyale',
+  'Tetris', 'Chess', 'Uno', 'Domino',
 ];
+
+// Personality types with weights: dumb(35%), medium(40%), smart(25%)
+const PERSONALITY_WEIGHTS = [
+  { type: 'dumb',  weight: 0.35 },
+  { type: 'medium', weight: 0.40 },
+  { type: 'smart',  weight: 0.25 },
+];
+
+function pickPersonality() {
+  const r = Math.random();
+  let acc = 0;
+  for (const p of PERSONALITY_WEIGHTS) {
+    acc += p.weight;
+    if (r < acc) return p.type;
+  }
+  return 'medium';
+}
 
 export class Bot {
   constructor(room, opts = {}) {
@@ -156,9 +98,21 @@ export class Bot {
     this.isBotFlag = true;
     this.name = opts.name || BOT_NAMES[(Math.random() * BOT_NAMES.length) | 0];
     this.skin = opts.skin != null ? opts.skin : (Math.random() * 11) | 0;
-    this._startMass = opts.mass; // admin-spawned mass override
-    this.thinkEvery = 1 + ((Math.random() * 3) | 0); // 1..3 tick cadence
+    this._startMass = opts.mass;
+    this.personality = opts.personality || pickPersonality();
+
+    // Dumb bots think less often (slower reactions). Smart bots think every tick.
+    if (this.personality === 'dumb') {
+      this.thinkEvery = 2 + ((Math.random() * 2) | 0); // 2..3
+    } else if (this.personality === 'smart') {
+      this.thinkEvery = 1; // every tick
+    } else {
+      this.thinkEvery = 1 + ((Math.random() * 2) | 0); // 1..2
+    }
     this.tickCounter = 0;
+    this._wanderAngle = Math.random() * TAU; // for dumb wandering
+    this._huntTarget = null; // { headX, headY, score, id } for smart bots
+    this._huntTimer = 0;
 
     this.spawn();
   }
@@ -180,6 +134,8 @@ export class Bot {
     if (startScore > 0) this.snake.addScore(startScore);
     this.snake.botRef = this;
     this.room.addSnake(this.snake);
+    this._huntTarget = null;
+    this._huntTimer = 0;
   }
 
   respawn() {
@@ -189,15 +145,16 @@ export class Bot {
 
   onDeath() { /* Room will call respawn after a short delay */ }
 
-  // Main AI tick: decide targetAngle + boost.
+  // ---- Main AI tick ----
   think() {
     const s = this.snake;
     if (!s || s.dead) return;
     this.tickCounter++;
     const hx = s.headX, hy = s.headY;
     const headR = s.bodyRadius;
+    const myScore = s.score;
 
-    // --- 1) AVOID border: if getting close to world edge, steer inward. ---
+    // 1) AVOID border — always priority.
     const distFromCenter = Math.sqrt(hx * hx + hy * hy);
     const edgeMargin = CONFIG.WORLD_RADIUS - headR * 2 - 60;
     if (distFromCenter > edgeMargin) {
@@ -207,7 +164,7 @@ export class Bot {
       return;
     }
 
-    // --- 2) AVOID bodies: scan a few look-ahead points for collisions. ---
+    // 2) AVOID bodies — always priority.
     const lookAhead = this._scanAhead(s, headR);
     if (lookAhead.danger) {
       const left = wrapAngle(s.angle - 0.6);
@@ -225,53 +182,165 @@ export class Bot {
       return;
     }
 
-    // --- 3) FLEE: only run if something huge is right on top of us. ---
+    // Personality-specific behavior below.
+    switch (this.personality) {
+      case 'dumb':  this._thinkDumb(s, hx, hy, headR, myScore); break;
+      case 'smart': this._thinkSmart(s, hx, hy, headR, myScore, distFromCenter); break;
+      default:      this._thinkMedium(s, hx, hy, headR, myScore, distFromCenter); break;
+    }
+  }
+
+  // ---- DUMB bot: wanders randomly, eats food only if very close, rarely fights ----
+  _thinkDumb(s, hx, hy, headR, myScore) {
+    // Flee if something huge is right on top (panic).
     const threat = this.room.findThreatTo(s);
-    if (threat && threat.dist2 < 180 * 180) {
+    if (threat && threat.dist2 < 120 * 120) {
       const flee = Math.atan2(hy - threat.headY, hx - threat.headX);
       s.setTargetAngle(flee);
       s.setBoost(false);
       return;
     }
 
-    // --- 4) EAT: head toward nearest food (wide search). ---
-    const food = this.room.findNearestFood(hx, hy, 900);
+    // Eat only very close food.
+    const food = this.room.findNearestFood(hx, hy, 300);
     if (food) {
       s.setTargetAngle(Math.atan2(food.y - hy, food.x - hx));
       s.setBoost(false);
       return;
     }
 
-    // --- 5) POWERUP: chase multiplier powerups if within range. ---
-    const powerup = this.room.findNearestPowerup(hx, hy, 600);
+    // Wander: slowly drift in a random direction, occasionally change.
+    if (this.tickCounter % 20 === 0 || !this._wanderAngle) {
+      this._wanderAngle = Math.random() * TAU;
+    }
+    // Drift toward center slightly so they don't hug the wall.
+    const toCenter = Math.atan2(-hy, -hx);
+    const blend = wrapAngle(this._wanderAngle * 0.7 + toCenter * 0.3);
+    s.setTargetAngle(blend);
+    s.setBoost(false);
+  }
+
+  // ---- MEDIUM bot: eats food, avoids threats, mild aggression ----
+  _thinkMedium(s, hx, hy, headR, myScore, distFromCenter) {
+    // Flee from threats.
+    const threat = this.room.findThreatTo(s);
+    if (threat && threat.dist2 < 200 * 200) {
+      const flee = Math.atan2(hy - threat.headY, hx - threat.headX);
+      s.setTargetAngle(flee);
+      s.setBoost(false);
+      return;
+    }
+
+    // Chase prey if we're significantly bigger and it's close.
+    const prey = this.room.findPreyFor(s);
+    if (prey && myScore > 80) {
+      // Predict where prey is going and cut it off.
+      const predictDist = Math.sqrt(prey.d2) * 0.3;
+      const tx = prey.headX + Math.cos(prey.angle) * predictDist;
+      const ty = prey.headY + Math.sin(prey.angle) * predictDist;
+      s.setTargetAngle(Math.atan2(ty - hy, tx - hx));
+      // Boost to close distance if prey is far.
+      s.setBoost(prey.d2 > 200 * 200 && myScore > 150);
+      return;
+    }
+
+    // Powerups.
+    const powerup = this.room.findNearestPowerup(hx, hy, 500);
     if (powerup) {
       s.setTargetAngle(Math.atan2(powerup.y - hy, powerup.x - hx));
       s.setBoost(false);
       return;
     }
 
-    // --- 6) CIRCLE: orbit around the world center at a comfortable radius. ---
-    const targetOrbit = CONFIG.WORLD_RADIUS * 0.5;
-    const orbitAngle = Math.atan2(hy, hx);
-    // tangent direction (perpendicular to radial, clockwise)
-    const tangent = wrapAngle(orbitAngle + Math.PI / 2);
-    // blend toward tangent if we're roughly the right distance, else steer in/out
-    if (distFromCenter > targetOrbit * 1.15) {
-      // too far out -> steer inward
-      const inward = Math.atan2(-hy, -hx);
-      s.setTargetAngle(wrapAngle(inward + 0.4));
-    } else if (distFromCenter < targetOrbit * 0.85) {
-      // too far in -> steer outward
-      const outward = Math.atan2(hy, hx);
-      s.setTargetAngle(wrapAngle(outward + 0.3));
-    } else {
-      s.setTargetAngle(tangent);
+    // Eat food — prefer food along path toward center.
+    const food = this.room.findNearestFood(hx, hy, 600);
+    if (food) {
+      s.setTargetAngle(Math.atan2(food.y - hy, food.x - hx));
+      s.setBoost(false);
+      return;
     }
+
+    // Move toward center of the map.
+    const toCenter = Math.atan2(-hy, -hx);
+    const wander = s.angle + (Math.random() - 0.5) * 0.5;
+    s.setTargetAngle(distFromCenter > CONFIG.WORLD_RADIUS * 0.4
+      ? wrapAngle(toCenter * 0.6 + wander * 0.4)
+      : wander);
     s.setBoost(false);
   }
 
-  // Sample a few points ahead along current heading; return {danger} if any
-  // are blocked by a body or the border.
+  // ---- SMART bot: aggressive hunter, boosts to cut off, seeks center & powerups ----
+  _thinkSmart(s, hx, hy, headR, myScore, distFromCenter) {
+    // Flee from much bigger threats.
+    const threat = this.room.findThreatTo(s);
+    if (threat && threat.dist2 < 250 * 250) {
+      const flee = Math.atan2(hy - threat.headY, hx - threat.headX);
+      s.setTargetAngle(flee);
+      s.setBoost(true); // boost away from danger
+      return;
+    }
+
+    // Hunt smaller snakes aggressively.
+    const prey = this.room.findPreyFor(s);
+    if (prey && myScore > 30) {
+      this._huntTarget = { headX: prey.headX, headY: prey.headY, score: prey.score, id: prey.id };
+      this._huntTimer = 60; // remember target for 3 seconds
+      // Predict prey trajectory for intercept.
+      const predictDist = Math.sqrt(prey.d2) * 0.4;
+      const tx = prey.headX + Math.cos(prey.angle) * predictDist;
+      const ty = prey.headY + Math.sin(prey.angle) * predictDist;
+      s.setTargetAngle(Math.atan2(ty - hy, tx - hx));
+      // Boost aggressively to close distance.
+      const close = Math.sqrt(prey.d2);
+      s.setBoost(close < 400 && myScore > prey.score * 1.1);
+      return;
+    }
+
+    // Continue chasing remembered target if still close.
+    if (this._huntTimer > 0 && this._huntTarget) {
+      this._huntTimer--;
+      const dx = this._huntTarget.headX - hx;
+      const dy = this._huntTarget.headY - hy;
+      const d2 = dx * dx + dy * dy;
+      if (d2 < 500 * 500) {
+        s.setTargetAngle(Math.atan2(dy, dx));
+        s.setBoost(d2 < 300 * 300 && myScore > 40);
+        return;
+      }
+      this._huntTarget = null;
+    }
+
+    // Powerups — boost to grab them.
+    const powerup = this.room.findNearestPowerup(hx, hy, 700);
+    if (powerup) {
+      s.setTargetAngle(Math.atan2(powerup.y - hy, powerup.x - hx));
+      const pupDist = Math.sqrt(dist2(hx, hy, powerup.x, powerup.y));
+      s.setBoost(pupDist > 200);
+      return;
+    }
+
+    // Eat food — prefer dense clusters.
+    const food = this.room.findNearestFood(hx, hy, 800);
+    if (food) {
+      s.setTargetAngle(Math.atan2(food.y - hy, food.x - hx));
+      s.setBoost(false);
+      return;
+    }
+
+    // Move toward center — smart bots prefer center of the map.
+    const toCenter = Math.atan2(-hy, -hx);
+    if (distFromCenter > CONFIG.WORLD_RADIUS * 0.3) {
+      s.setTargetAngle(toCenter);
+      s.setBoost(false);
+    } else {
+      // Already near center, patrol in a direction looking for prey.
+      const patrol = s.angle + (Math.random() > 0.5 ? 0.3 : -0.3);
+      s.setTargetAngle(patrol);
+      s.setBoost(false);
+    }
+  }
+
+  // Scan ahead for collisions.
   _scanAhead(s, headR) {
     const lookDists = [headR * 2 + 18, headR * 2 + 50, headR * 2 + 90];
     for (let i = 0; i < lookDists.length; i++) {

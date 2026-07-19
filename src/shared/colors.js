@@ -22,6 +22,8 @@ export const SKINS = [
     colors: ['#FF4444', '#3388FF', '#FF4444', '#3388FF'] },
   { name: 'Royal',      main: 'combo',   shade: '#1E55B3', glow: '#66AAFF', head: '#3388FF',
     colors: ['#3388FF', '#55CCFF', '#FF6699', '#3388FF'] },
+  { name: 'Dark Green', main: 'combo',   shade: '#063006', glow: '#22aa22', head: '#0a4a0a',
+    colors: ['#0a4a0a', '#1a6b1a', '#1a6b1a'] },
 ];
 
 export const RAINBOW_STOPS = [
