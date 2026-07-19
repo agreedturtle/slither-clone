@@ -274,6 +274,11 @@ export class Renderer {
     const n = pts.length / 2;
     if (n < 2) return;
 
+    // Dead snakes fade out gradually.
+    const deadFade = s._dead ? Math.max(0, 1 - ((performance.now() - (s._deadAt || 0)) / 4000)) : 1;
+    if (deadFade <= 0) return;
+    if (deadFade < 1) ctx.globalAlpha = deadFade;
+
     const skin = SKINS[s.skin] || SKINS[0];
     const bodyR = bodyRadiusFromScore(s.score) * cam.zoom;
     const lineWidth = bodyR * 2;
@@ -431,6 +436,8 @@ export class Renderer {
         ctx.stroke();
       }
     }
+
+    if (deadFade < 1) ctx.globalAlpha = 1;
   }
 }
 

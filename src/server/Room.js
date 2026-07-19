@@ -511,22 +511,27 @@ export class Room {
 
   _sendSnapshotTo(player) {
     // Cull to snakes intersecting the player's view radius around their head.
-    // (If dead/spectating, use last known head or world center.)
+    // (If dead/spectating, use world center but with no culling so the player
+    // can still see the full game.)
     let cx, cy;
+    let spectating = false;
     if (player.alive && player.snake) {
       cx = player.snake.headX;
       cy = player.snake.headY;
     } else {
       cx = 0; cy = 0;
+      spectating = true;
     }
     const view2 = CONFIG.VIEW_RADIUS * CONFIG.VIEW_RADIUS;
     const visible = [];
     for (const s of this.snakes.values()) {
       if (s.dead) continue;
-      // quick reject by bounding: head distance + tail reach
-      const d2 = dist2(cx, cy, s.headX, s.headY);
-      const reach = s.bodyRadius * s.points + CONFIG.VIEW_RADIUS * 0.5;
-      if (d2 > view2 + reach * reach) continue;
+      if (!spectating) {
+        // quick reject by bounding: head distance + tail reach
+        const d2 = dist2(cx, cy, s.headX, s.headY);
+        const reach = s.bodyRadius * s.points + CONFIG.VIEW_RADIUS * 0.5;
+        if (d2 > view2 + reach * reach) continue;
+      }
       const body = s.packBody(CONFIG.MAX_BODY_POINTS_NET);
       visible.push({
         id: s.id,

@@ -204,8 +204,10 @@ export class Game {
     this._deathScore = d.finalScore;
     this._deathRank = d.finalRank;
     this._deathScreenShown = false;
-    // Remove my snake so camera stops following it immediately
-    this.state.snakes.delete(this.state.myId);
+    this._deathAlpha = 0;
+    // Mark snake dead but keep it visible so it doesn't just vanish.
+    const me = this.state.snakes.get(this.state.myId);
+    if (me) { me._dead = true; me._deadAt = performance.now(); }
   }
 
   // ---- Public API ----
@@ -268,12 +270,12 @@ export class Game {
     this.camera.setDt(dt);
     const meNow = this.state.snakes.get(this.state.myId);
     if (!this.state.alive && this._deathPos) {
-      // Dead — hold camera at the death spot so the world stays visible.
+      // Dead — camera stays at death spot, slowly zooms out.
       this.camera.follow(this._deathPos.x, this._deathPos.y);
-      // Advance death fade (0 -> 0.3 over 2 seconds — subtle dim, not blackout).
-      if (this._deathAlpha < 0.3) {
-        this._deathAlpha = Math.min(0.3, this._deathAlpha + dt * 0.00015);
-      }
+      const elapsed = performance.now() - this._deathTime;
+      const targetZoom = Math.max(0.35, this.camera._targetZoom * Math.pow(0.997, elapsed / 16));
+      this.camera.setZoom(targetZoom);
+      this._deathAlpha = 0;
       // Show death screen after 3-second delay.
       if (!this._deathScreenShown && performance.now() - this._deathTime >= 3000) {
         this._deathScreenShown = true;
