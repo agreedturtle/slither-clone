@@ -12,9 +12,11 @@ export class Database {
   }
 
   async _init() {
-    const url = process.env.DATABASE_URL;
+    const url = process.env.DATABASE_URL || process.env.POSTGRES_URL || process.env.POSTGRESQL_URL || process.env.DB_URL || process.env.DATABASE_PRIVATE_URL;
     if (!url) {
-      console.warn('[db] No DATABASE_URL — stats will not persist.');
+      console.warn('[db] No DATABASE_URL found. Available DB vars:',
+        Object.keys(process.env).filter(k => /db|postgres|sql|database/i.test(k)).join(', ') || '(none)');
+      console.warn('[db] Stats will not persist.');
       return;
     }
     try {
