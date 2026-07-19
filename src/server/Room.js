@@ -40,6 +40,9 @@ export class Room {
   constructor() {
     this.speedMul = 1.0;        // global movement speed multiplier (admin-tunable)
     this.godMode = false;       // admin: when true, the admin player can't die
+    this._lagUntil = 0;         // timestamp: when current lag ends
+    this._nextLagAt = Date.now() + 30000 + Math.random() * 30000; // 30-60s first lag
+    this._lagDuration = 0;      // ms of current lag
     this.botTarget = (() => {
       const c = Number(process.env.BOT_COUNT);
       return Number.isFinite(c) && c >= 0 ? c : CONFIG.BOT_TARGET;
@@ -204,41 +207,64 @@ export class Room {
   _tick() {
     try {
       this.tick++;
+      const now = Date.now();
 
-      // 1) Bots think (sets target angle / boost).
-      for (const b of this.bots) {
-        if (b.snake && !b.snake.dead && (this.tick % b.thinkEvery === 0)) {
-          b.think();
+      // --- Lag mechanic: periodic lag spikes ---
+      const lagging = now < this._lagUntil;
+      if (!lagging && now >= this._nextLagAt) {
+        // Start a new lag spike
+        this._lagDuration = 1000 + Math.random() * 2000; // 1-3 seconds
+        this._lagUntil = now + this._lagDuration;
+        this._nextLagAt = now + this._lagDuration + 30000 + Math.random() * 30000; // 30-60s after lag ends
+      }
+      if (lagging && now >= this._lagUntil) {
+        // Lag just ended — apply food glitch
+        this._applyFoodGlitch();
+      }
+
+      // 1) Bots think (sets target angle / boost) — skipped during lag.
+      if (!lagging) {
+        for (const b of this.bots) {
+          if (b.snake && !b.snake.dead && (this.tick % b.thinkEvery === 0)) {
+            b.think();
+          }
         }
       }
 
-      // 2) Advance all snakes.
+      // 2) Advance all snakes — always runs (snakes keep moving in last direction).
+      //    But during lag, dead snakes don't tick (freeze in place).
       for (const s of this.snakes.values()) {
+        if (lagging && s.dead) continue;
         s.tick(this);
       }
 
       // 3) Rebuild spatial grids for collision/food.
       this._rebuildGrids();
 
-      // 4) Food eating.
-      this._resolveFoodEating();
+      // 4) Food eating — skipped during lag.
+      if (!lagging) {
+        this._resolveFoodEating();
+      }
 
-      // 5) Collisions -> deaths.
-      this._resolveCollisions();
+      // 5) Collisions -> deaths — skipped during lag.
+      if (!lagging) {
+        this._resolveCollisions();
+      }
 
-      // 6) Population & food maintenance.
-      this._maintainPopulation();
-      this._processRespawns();
-      if (this.tick % 2 === 0) this.food.maintain();
-      if (this.tick % 10 === 0) this.food.sweepExpired();
-      if (this.tick % CONFIG.POWERUP_SPAWN_INTERVAL === 0) this.food.spawnPowerup();
-      if (this.tick % 10 === 0) this.food.sweepPowerups();
+      // 6) Population & food maintenance — skipped during lag.
+      if (!lagging) {
+        this._maintainPopulation();
+        this._processRespawns();
+        if (this.tick % 2 === 0) this.food.maintain();
+        if (this.tick % 10 === 0) this.food.sweepExpired();
+        if (this.tick % CONFIG.POWERUP_SPAWN_INTERVAL === 0) this.food.spawnPowerup();
+        if (this.tick % 10 === 0) this.food.sweepPowerups();
+      }
 
       // 7) Broadcast (per-client culled).
       this._broadcast();
 
       // 8) Leaderboard (~1Hz).
-      const now = Date.now();
       if (now - this._lastBoardAt >= CONFIG.LEADERBOARD_INTERVAL_MS) {
         this._lastBoardAt = now;
         this._broadcastLeaderboard();
@@ -249,8 +275,53 @@ export class Room {
         this._broadcastRadar();
       }
     } catch (err) {
-      // A tick must never tear down the server.
       console.error('[Room] tick error:', err);
+    }
+  }
+
+  // ---- Food glitch (triggered after lag spike ends) ----
+  _applyFoodGlitch() {
+    const pellets = this.food.pellets;
+    const total = pellets.size;
+    if (total === 0) return;
+
+    // Roll which glitch type: 20-35% instant despawn OR 5-12% spread+halve
+    const roll = Math.random();
+    if (roll < 0.5) {
+      // Type A: instant despawn — remove 20-35% of food
+      const pct = 0.20 + Math.random() * 0.15; // 20-35%
+      const removeCount = Math.max(1, Math.floor(total * pct));
+      const ids = Array.from(pellets.keys());
+      // Shuffle and pick
+      for (let i = ids.length - 1; i > 0; i--) {
+        const j = (Math.random() * (i + 1)) | 0;
+        [ids[i], ids[j]] = [ids[j], ids[i]];
+      }
+      for (let i = 0; i < removeCount && i < ids.length; i++) {
+        pellets.delete(ids[i]);
+        this.food.removedQueue.push(ids[i]);
+      }
+      console.log(`[glitch] Despawned ${removeCount} food (${(pct * 100).toFixed(0)}%)`);
+    } else {
+      // Type B: spread+halve — teleport 5-12% of food to random positions, halve value
+      const pct = 0.05 + Math.random() * 0.07; // 5-12%
+      const spreadCount = Math.max(1, Math.floor(total * pct));
+      const ids = Array.from(pellets.keys());
+      for (let i = ids.length - 1; i > 0; i--) {
+        const j = (Math.random() * (i + 1)) | 0;
+        [ids[i], ids[j]] = [ids[j], ids[i]];
+      }
+      for (let i = 0; i < spreadCount && i < ids.length; i++) {
+        const p = pellets.get(ids[i]);
+        if (!p) continue;
+        const newPos = randInDisk(CONFIG.WORLD_RADIUS * 0.95);
+        // Remove old, add new at random position with halved value
+        pellets.delete(ids[i]);
+        this.food.removedQueue.push(ids[i]);
+        const halfVal = Math.max(1, Math.floor(p.value / 2));
+        this.food._spawnAt(newPos.x, newPos.y, halfVal, p.death);
+      }
+      console.log(`[glitch] Spread+halved ${spreadCount} food (${(pct * 100).toFixed(0)}%)`);
     }
   }
 
@@ -881,6 +952,16 @@ export class Room {
         this._respawnQueue = [];
         this._maintainPopulation();
         player.send(encodeAdminAck(true, `Arena reset: killed ${killed}, cleared ${foodBefore} food, respawned ${this.bots.length} bots`));
+        break;
+      }
+      case ADMIN.RESET_PROFILES: {
+        if (!this.db) {
+          player.send(encodeAdminAck(false, 'No database configured'));
+          return;
+        }
+        this.db.resetAllStats().then(result => {
+          player.send(encodeAdminAck(result.ok, result.msg));
+        });
         break;
       }
       default:

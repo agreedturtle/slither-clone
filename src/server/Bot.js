@@ -129,7 +129,7 @@ export class Bot {
       y: pos.y,
       angle,
     });
-    const startScore = this._startMass != null ? this._startMass : ((Math.random() * Math.random()) * 60) | 0;
+    const startScore = this._startMass != null ? this._startMass : (Math.floor(Math.random() * 13) + 18); // 18-30
     this._startMass = null;
     if (startScore > 0) this.snake.addScore(startScore);
     this.snake.botRef = this;

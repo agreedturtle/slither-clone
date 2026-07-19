@@ -150,4 +150,12 @@ export class Database {
       return r.rows.map(s => ({ name: s.name, highScore: s.high_score, totalKills: s.total_kills, headshots: s.headshots }));
     } catch { return []; }
   }
+
+  async resetAllStats() {
+    if (!this.pool) return { ok: false, msg: 'No database configured' };
+    try {
+      await this._q('UPDATE stats SET high_score = 0, total_kills = 0, headshots = 0, games_played = 0, deaths = 0');
+      return { ok: true, msg: 'All profiles reset' };
+    } catch (e) { console.error('[db] resetAllStats:', e.message); return { ok: false, msg: 'Reset failed' }; }
+  }
 }

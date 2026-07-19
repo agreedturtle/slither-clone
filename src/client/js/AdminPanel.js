@@ -155,6 +155,10 @@ export class AdminPanel {
         this._send(ADMIN.RESET_ARENA);
         break;
       }
+      case 'RESET_PROFILES': {
+        this._send(ADMIN.RESET_PROFILES);
+        break;
+      }
     }
   }
 }

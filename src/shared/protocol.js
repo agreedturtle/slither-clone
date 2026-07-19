@@ -49,6 +49,7 @@ export const ADMIN = {
   GIVE_ZOOM: 16,       // durationSec:u16 (default 50)
   GIVE_ALL_BOOSTERS: 17, //
   RESET_ARENA: 18,         //
+  RESET_PROFILES: 19,      // resets all stats (high_score, kills, etc)
 };
 
 // --- Server -> Client opcodes ---------------------------------------------

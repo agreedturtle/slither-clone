@@ -50,7 +50,7 @@ export class Player {
       y: pos.y,
       angle,
     });
-    this.snake.addScore(10);
+    this.snake.addScore(Math.floor(Math.random() * 13) + 18); // 18-30 start mass
     this.snake.playerRef = this;
     this.alive = true;
     this.room.addSnake(this.snake);
@@ -63,6 +63,8 @@ export class Player {
 
   handleInput({ angle, boost, autoSpin }) {
     if (!this.alive || !this.snake) return;
+    // Ignore inputs during server lag (snakes keep moving in last direction).
+    if (this.room._lagUntil > Date.now()) return;
     // Validate angle to a sane range.
     if (Number.isFinite(angle)) {
       this.snake.setTargetAngle(angle);
