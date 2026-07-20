@@ -27,6 +27,7 @@ const SHARED_DIR = path.join(__dirname, '..', 'shared'); // served at /shared/*
 
 const PORT = Number(process.env.PORT) || 3000;
 const IDLE_TIMEOUT_MS = 60000; // drop clients we haven't heard from in 60s
+const MAX_PLAYERS = Number(process.env.MAX_PLAYERS) || 40;
 
 // --- MIME types for static serving -----------------------------------------
 const MIME = {
@@ -107,6 +108,10 @@ function bumpIdle(ws) {
 }
 
 wss.on('connection', (ws) => {
+  if (room.players.size >= MAX_PLAYERS) {
+    try { ws.close(4001, 'server full'); } catch (_) {}
+    return;
+  }
   const player = room.addPlayer(ws);
   bumpIdle(ws);
 
