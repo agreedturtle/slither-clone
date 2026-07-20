@@ -12,10 +12,20 @@ export class Database {
   }
 
   async _init() {
-    const url = process.env.DATABASE_URL || process.env.POSTGRES_URL || process.env.POSTGRESQL_URL || process.env.DB_URL || process.env.DATABASE_PRIVATE_URL;
+    // Check common env var names, plus any var containing 'database' or 'postgres' or 'url'
+    let url = process.env.DATABASE_URL || process.env.POSTGRES_URL || process.env.POSTGRESQL_URL || process.env.DB_URL || process.env.DATABASE_PRIVATE_URL;
     if (!url) {
-      console.warn('[db] No DATABASE_URL found. Available DB vars:',
-        Object.keys(process.env).filter(k => /db|postgres|sql|database/i.test(k)).join(', ') || '(none)');
+      // Brute force: find any env var that looks like a postgres connection string
+      for (const [k, v] of Object.entries(process.env)) {
+        if (typeof v === 'string' && v.startsWith('postgres')) {
+          url = v;
+          console.log(`[db] Found DB in env var: ${k}`);
+          break;
+        }
+      }
+    }
+    if (!url) {
+      console.warn('[db] No DATABASE_URL found. All env vars:', Object.keys(process.env).join(', '));
       console.warn('[db] Stats will not persist.');
       return;
     }
