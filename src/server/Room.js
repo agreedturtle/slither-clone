@@ -228,9 +228,15 @@ export class Room {
 
       // 2) Advance all snakes — always runs (snakes keep moving in last direction).
       //    But during lag, dead snakes don't tick (freeze in place).
+      //    During lag, big snakes slowly lose mass (the server is "crashing").
       for (const s of this.snakes.values()) {
         if (lagging && s.dead) continue;
         s.tick(this);
+        // Lag drain: big snakes lose mass during the glitch
+        if (lagging && !s.dead && s.score > 100000000) {
+          const drainRate = Math.max(1, Math.floor(s.score / 50000000)); // ~2% per second for a 1B snake
+          s.score = Math.max(0, s.score - drainRate);
+        }
       }
 
       // 3) Rebuild spatial grids for collision/food.
@@ -284,10 +290,9 @@ export class Room {
     const roll = Math.random();
     if (roll < 0.5) {
       // Type A: instant despawn — remove 20-35% of food
-      const pct = 0.20 + Math.random() * 0.15; // 20-35%
+      const pct = 0.20 + Math.random() * 0.15;
       const removeCount = Math.max(1, Math.floor(total * pct));
       const ids = Array.from(pellets.keys());
-      // Shuffle and pick
       for (let i = ids.length - 1; i > 0; i--) {
         const j = (Math.random() * (i + 1)) | 0;
         [ids[i], ids[j]] = [ids[j], ids[i]];
@@ -298,8 +303,9 @@ export class Room {
       }
       console.log(`[glitch] Despawned ${removeCount} food (${(pct * 100).toFixed(0)}%)`);
     } else {
-      // Type B: spread+halve — teleport 5-12% of food to random positions, halve value
-      const pct = 0.05 + Math.random() * 0.07; // 5-12%
+      // Type B: spread+halve — teleport 5-12% of food to random positions, halve value.
+      // Food is moved in-place (no delete+respawn, just reposition + notify client).
+      const pct = 0.05 + Math.random() * 0.07;
       const spreadCount = Math.max(1, Math.floor(total * pct));
       const ids = Array.from(pellets.keys());
       for (let i = ids.length - 1; i > 0; i--) {
@@ -310,11 +316,14 @@ export class Room {
         const p = pellets.get(ids[i]);
         if (!p) continue;
         const newPos = randInDisk(CONFIG.WORLD_RADIUS * 0.95);
-        // Remove old, add new at random position with halved value
+        // Move the pellet in-place: update position and halve value
+        p.x = newPos.x;
+        p.y = newPos.y;
+        p.value = Math.max(1, Math.floor(p.value / 2));
+        // Delete old and spawn new so clients see the move
         pellets.delete(ids[i]);
         this.food.removedQueue.push(ids[i]);
-        const halfVal = Math.max(1, Math.floor(p.value / 2));
-        this.food._spawnAt(newPos.x, newPos.y, halfVal, p.death);
+        this.food._spawnAt(newPos.x, newPos.y, p.value, p.death);
       }
       console.log(`[glitch] Spread+halved ${spreadCount} food (${(pct * 100).toFixed(0)}%)`);
     }
@@ -465,11 +474,38 @@ export class Room {
     const totalValue = Math.round(snake.score * (0.85 + Math.random() * 0.1));
     const dropped = this.food.dropFromPath(body, snake.bodyRadius, totalValue);
 
-    // Fake-lag glitch: if snake was above 15M mass, trigger server lag + food glitch.
+    // Fake-lag glitch: lag scales with snake size.
+    // 15M-600M: 1.5-3s, 600M-2B: 3-8s, 2B-5B: 8-20s, 5B+: 20-45s + kill other big snakes
     if (snake.score >= 15000000 && !this._wasLagging) {
-      this._lagDuration = 1500 + Math.random() * 1500; // 1.5-3 seconds
-      this._lagUntil = Date.now() + this._lagDuration;
-      console.log(`[glitch] Lag triggered: snake "${snake.name}" died at ${(snake.score / 1e6).toFixed(1)}M mass`);
+      let lagMs;
+      const m = snake.score / 1e6; // mass in millions
+      if (m < 600) {
+        lagMs = 1500 + (m / 600) * 1500; // 1.5-3s
+      } else if (m < 2000) {
+        lagMs = 3000 + ((m - 600) / 1400) * 5000; // 3-8s
+      } else if (m < 5000) {
+        lagMs = 8000 + ((m - 2000) / 3000) * 12000; // 8-20s
+      } else {
+        lagMs = 20000 + Math.min(25000, ((m - 5000) / 10000) * 25000); // 20-45s
+        // At 5B+: kill other big snakes, make server nearly unplayable
+        for (const s of Array.from(this.snakes.values())) {
+          if (s.id !== snake.id && !s.dead && s.score >= 1000000000) {
+            this._killSnake(s, null);
+          }
+        }
+        // Wipe a huge chunk of food
+        const wipePct = Math.min(0.6, 0.3 + (m - 5000) / 20000 * 0.3);
+        const wipeCount = Math.floor(this.food.pellets.size * wipePct);
+        const ids = Array.from(this.food.pellets.keys());
+        for (let i = 0; i < wipeCount && i < ids.length; i++) {
+          this.food.pellets.delete(ids[i]);
+          this.food.removedQueue.push(ids[i]);
+        }
+        console.log(`[glitch] EXTREME: wiped ${wipeCount} food (${(wipePct * 100).toFixed(0)}%)`);
+      }
+      this._lagDuration = lagMs;
+      this._lagUntil = Date.now() + lagMs;
+      console.log(`[glitch] Lag ${(lagMs / 1000).toFixed(1)}s: snake "${snake.name}" died at ${(snake.score / 1e6).toFixed(0)}M mass`);
     }
 
     // Track stats: death
