@@ -341,38 +341,35 @@ html, body {
   position: absolute;
   top: 16px;
   right: 16px;
-  width: 210px;
+  width: 200px;
   text-align: left;
   backdrop-filter: blur(var(--blur));
 }
 #leaderboardList {
   list-style: none;
-  margin: 8px 0 0;
+  margin: 6px 0 0;
   font-size: 12px;
-  font-weight: 600;
 }
 #leaderboardList li {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 3px 0;
-  color: #c8d6e8;
-  border-bottom: 1px solid rgba(100,160,255,0.05);
+  padding: 2px 0;
+  color: #94a3b8;
 }
 #leaderboardList li:last-child { border-bottom: none; }
 #leaderboardList li .rank {
   color: var(--text-muted);
-  margin-right: 8px;
-  width: 16px;
+  margin-right: 6px;
+  width: 14px;
   display: inline-block;
-  font-weight: 700;
+  font-size: 11px;
 }
 #leaderboardList li.me {
   color: var(--green);
-  text-shadow: 0 0 8px var(--green-glow);
 }
 .my-rank {
-  margin-top: 6px;
+  margin-top: 4px;
   font-size: 11px;
   color: var(--text-dim);
   padding-top: 4px;
