@@ -59,6 +59,8 @@ export class Room {
     this._nextPlayerId = 1;
     this._bodyGrid = new SpatialGrid(BODY_GRID_CELL);
     this._foodGrid = new SpatialGrid(FOOD_GRID_CELL);
+    this._gridPool = [];          // reusable body-point objects (avoids per-tick allocation)
+    this._gridPoolLen = 0;
     this._respawnQueue = [];      // {bot, at}
     this._pendingRemoves = [];    // snake ids removed since last broadcast
     this._tickFoodAdd = [];       // per-tick food deltas (drained once, sent to all)
@@ -331,17 +333,29 @@ export class Room {
 
   _rebuildGrids() {
     // Body grid: insert every body point of every snake (with margin).
+    // Uses a reusable object pool to avoid millions of allocations per tick.
     const bg = this._bodyGrid;
     bg.clear();
+    let poolIdx = 0;
+    const pool = this._gridPool;
     for (const s of this.snakes.values()) {
       if (s.dead) continue;
       s.rebuildBodyIfNeeded();
       const r = s.bodyRadius;
       const xs = s._bodyX, ys = s._bodyY, n = s._bodyLen;
       for (let i = 0; i < n; i++) {
-        bg.insert({ x: xs[i], y: ys[i], r, ownerId: s.id });
+        let pt = pool[poolIdx];
+        if (pt) {
+          pt.x = xs[i]; pt.y = ys[i]; pt.r = r; pt.ownerId = s.id;
+        } else {
+          pt = { x: xs[i], y: ys[i], r, ownerId: s.id };
+          pool[poolIdx] = pt;
+        }
+        bg.insert(pt);
+        poolIdx++;
       }
     }
+    this._gridPoolLen = poolIdx;
     // Food grid.
     const fg = this._foodGrid;
     fg.clear();
@@ -713,7 +727,7 @@ export class Room {
         // Sample up to 30 body points for minimap rendering (1:1 accuracy)
         s.rebuildBodyIfNeeded();
         const bodyLen = s._bodyLen;
-        const maxMiniPts = Math.min(30, bodyLen);
+        const maxMiniPts = Math.min(10, bodyLen);
         const bodyPts = [];
         if (maxMiniPts > 1) {
           const ratio = (bodyLen - 1) / (maxMiniPts - 1);
