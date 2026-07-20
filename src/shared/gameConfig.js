@@ -14,7 +14,7 @@ export default {
   FOOD_TARGET: 28000,            // how many food pellets exist at any time
 
   // --- Population ----------------------------------------------------------
-  BOT_TARGET: 75,               // bots fill the world up to this count
+  BOT_TARGET: 50,               // bots fill the world up to this count
 
   // --- Movement ------------------------------------------------------------
   BASE_SPEED: 12,             // units per tick (normal movement)
