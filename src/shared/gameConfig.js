@@ -10,8 +10,8 @@ export default {
   TICK_HZ: 20,                  // server ticks per second
 
   // --- World ---------------------------------------------------------------
-  WORLD_RADIUS: 12000,           // circular arena radius; leaving it = death
-  FOOD_TARGET: 12000,            // how many food pellets exist at any time
+  WORLD_RADIUS: 20000,           // circular arena radius; leaving it = death
+  FOOD_TARGET: 28000,            // how many food pellets exist at any time
 
   // --- Population ----------------------------------------------------------
   BOT_TARGET: 50,               // bots fill the world up to this count
@@ -24,10 +24,10 @@ export default {
   // --- Body / growth -------------------------------------------------------
   POINT_DIST: 3.5,              // visual spacing between body points
   MIN_POINTS: 10,               // smallest snake body length
-  MAX_POINTS: 5000,             // hard cap on longest snake
+  MAX_POINTS: 120000,            // hard cap on longest snake
   SCORE_PER_POINT: 5,           // score needed per extra body point (higher = slower growth)
   BODY_RADIUS_MIN: 8,           // thinnest the snake can be
-  BODY_RADIUS_MAX: 80,          // thickest the snake can be
+  BODY_RADIUS_MAX: 600,          // thickest the snake can be
 
   // --- Boost ---------------------------------------------------------------
   BOOST_COST_TICKS: 3,          // lose 1 score every N ticks while boosting (must be integer)
@@ -36,7 +36,7 @@ export default {
   // --- Food ----------------------------------------------------------------
   FOOD_VALUE_SMALL: 1,          // value of a normal food pellet
   FOOD_VALUE_DEATH_MIN: 5,      // min value of death-drop pellets
-  FOOD_VALUE_DEATH_MAX: 50,     // max value of death-drop pellets
+  FOOD_VALUE_DEATH_MAX: 50,        // max value of death-drop pellets
   FOOD_RADIUS_SMALL: 6,         // visual radius of normal food
   FOOD_RADIUS_DEATH: 10,        // visual radius of death-drop food
   FOOD_DEATH_LIFETIME_MIN: 50000, // ms before death food despawns (min)
@@ -46,7 +46,7 @@ export default {
 
   // --- Multiplier powerups --------------------------------------------------
   POWERUP_RADIUS: 22,           // visual radius of powerup potions
-  POWERUP_SPAWN_MAX: 30,        // max powerups on the map at once
+  POWERUP_SPAWN_MAX: 70,         // max powerups on the map at once
   POWERUP_LIFETIME_MIN: 60000,  // ms before powerup despawns (min)
   POWERUP_LIFETIME_MAX: 80000,  // ms before powerup despawns (max)
   POWERUP_SPAWN_INTERVAL: 4,    // ticks between spawn attempts
@@ -56,7 +56,7 @@ export default {
 
   // --- Network / client ----------------------------------------------------
   VIEW_RADIUS: 1400,            // how far around the head we send/draw entities
-  MAX_BODY_POINTS_NET: 500,     // hard cap on points transmitted per snake
+  MAX_BODY_POINTS_NET: 6000,    // hard cap on points transmitted per snake
 
   // --- Leaderboard ---------------------------------------------------------
   LEADERBOARD_SIZE: 10,         // top N shown on leaderboard
