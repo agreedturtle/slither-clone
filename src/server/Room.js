@@ -300,6 +300,8 @@ export class Room {
         [ids[i], ids[j]] = [ids[j], ids[i]];
       }
       for (let i = 0; i < removeCount && i < ids.length; i++) {
+        const p = pellets.get(ids[i]);
+        if (p && !p.death) this.food._nonDeathCount--;
         pellets.delete(ids[i]);
         this.food.removedQueue.push(ids[i]);
       }
@@ -323,6 +325,7 @@ export class Room {
         p.y = newPos.y;
         p.value = Math.max(1, Math.floor(p.value / 2));
         // Delete old and spawn new so clients see the move
+        if (!p.death) this.food._nonDeathCount--;
         pellets.delete(ids[i]);
         this.food.removedQueue.push(ids[i]);
         this.food._spawnAt(newPos.x, newPos.y, p.value, p.death);
@@ -512,6 +515,8 @@ export class Room {
         const wipeCount = Math.floor(this.food.pellets.size * wipePct);
         const ids = Array.from(this.food.pellets.keys());
         for (let i = 0; i < wipeCount && i < ids.length; i++) {
+          const wp = this.food.pellets.get(ids[i]);
+          if (wp && !wp.death) this.food._nonDeathCount--;
           this.food.pellets.delete(ids[i]);
           this.food.removedQueue.push(ids[i]);
         }
@@ -851,6 +856,7 @@ export class Room {
       case ADMIN.CLEAR_FOOD: {
         const ids = Array.from(this.food.pellets.keys());
         this.food.pellets.clear();
+        this.food._nonDeathCount = 0;
         for (let i = 0; i < ids.length; i++) this.food.removedQueue.push(ids[i]);
         this.food.addedQueue = [];
         player.send(encodeAdminAck(true, `Cleared ${ids.length} food pellets`));
@@ -980,6 +986,7 @@ export class Room {
           this.food.removedQueue.push(id);
         }
         this.food.pellets.clear();
+        this.food._nonDeathCount = 0;
         // Queue ALL old powerups for client-side removal.
         for (const id of this.food.powerups.keys()) {
           this.food.powerupRemoveQueue.push(id);

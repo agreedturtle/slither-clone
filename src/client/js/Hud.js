@@ -52,11 +52,21 @@ export class Hud {
     ctx.clearRect(0, 0, S, S);
     const cx = S / 2, cy = S / 2, rad = S / 2 - 3;
 
-    const grad = ctx.createRadialGradient(cx, cy, 0, cx, cy, rad);
-    grad.addColorStop(0, 'rgba(14,22,36,0.7)');
-    grad.addColorStop(1, 'rgba(6,10,18,0.85)');
-    ctx.fillStyle = grad;
-    ctx.beginPath(); ctx.arc(cx, cy, rad, 0, Math.PI * 2); ctx.fill();
+    // Cache the background as an offscreen canvas
+    if (!this._minimapBg || this._minimapBgRad !== rad) {
+      const bg = document.createElement('canvas');
+      bg.width = bg.height = S;
+      const bgCtx = bg.getContext('2d');
+      const bcx = S / 2, bcy = S / 2;
+      const grad = bgCtx.createRadialGradient(bcx, bcy, 0, bcx, bcy, rad);
+      grad.addColorStop(0, 'rgba(14,22,36,0.7)');
+      grad.addColorStop(1, 'rgba(6,10,18,0.85)');
+      bgCtx.fillStyle = grad;
+      bgCtx.beginPath(); bgCtx.arc(bcx, bcy, rad, 0, Math.PI * 2); bgCtx.fill();
+      this._minimapBg = bg;
+      this._minimapBgRad = rad;
+    }
+    ctx.drawImage(this._minimapBg, 0, 0);
 
     const scale = rad / CONFIG.WORLD_RADIUS;
 
@@ -124,10 +134,15 @@ export class Hud {
         'font-family:Inter,-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif;' +
         'top:56px;left:170px;';
       document.body.appendChild(this._boostPanel);
+      this._lastBoostHtml = '';
     }
     const BOOST_COLORS = { 2: '#6ee84a', 5: '#f87171', 10: '#fbbf24' };
     const hasAny = (boosters && boosters.length > 0) || hasMagnet || hasSpeed || hasZoom;
     if (hasAny) {
+      // Build a simple hash key to detect changes without comparing HTML
+      const key = `${effectiveMult}|${magnetTicks}|${speedTicks}|${zoomTicks}|${boosters ? boosters.map(b => b[0]+':'+b[1]).join(',') : ''}`;
+      if (key === this._lastBoostKey) return; // no change, skip DOM update
+      this._lastBoostKey = key;
       let html = '';
       if (hasMagnet) {
         const secs = Math.ceil(magnetTicks / 20);
@@ -168,7 +183,10 @@ export class Hud {
       this._boostPanel.innerHTML = html;
       this._boostPanel.style.opacity = '1';
     } else {
-      this._boostPanel.style.opacity = '0';
+      if (this._lastBoostKey !== '') {
+        this._lastBoostKey = '';
+        this._boostPanel.style.opacity = '0';
+      }
     }
   }
 }

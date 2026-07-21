@@ -341,25 +341,30 @@ export class Renderer {
     ctx.stroke();
 
     if (!this.lowGraphics && bodyR > 12) {
-      ctx.save();
-      ctx.shadowColor = skin.glow;
-      ctx.shadowBlur = Math.min(30, bodyR * 0.6);
       ctx.strokeStyle = skin.glow;
       ctx.globalAlpha = 0.35;
       ctx.lineWidth = lineWidth + 6;
       ctx.beginPath();
       ctx.moveTo(screen[0], screen[1]);
       for (let i = 1; i < count; i++) ctx.lineTo(screen[i * 2], screen[i * 2 + 1]);
-      ctx.stroke();
-      ctx.restore();
+      if (isMe) {
+        // Only apply expensive shadowBlur to the player's own snake
+        ctx.save();
+        ctx.shadowColor = skin.glow;
+        ctx.shadowBlur = Math.min(30, bodyR * 0.6);
+        ctx.stroke();
+        ctx.restore();
+      } else {
+        ctx.stroke();
+      }
       ctx.globalAlpha = 1;
     }
 
     if (isMultiColor) {
-      const chunk = 6;
+      const chunk = 20;
       for (let start = 0; start + 1 < count; start += chunk) {
         const end = Math.min(count - 1, start + chunk);
-        ctx.strokeStyle = skinColors[(((lo + start) / chunk) | 0) % skinColors.length];
+        ctx.strokeStyle = skinColors[(((lo + start) / 6) | 0) % skinColors.length];
         ctx.lineWidth = lineWidth;
         ctx.beginPath();
         ctx.moveTo(screen[start * 2], screen[start * 2 + 1]);

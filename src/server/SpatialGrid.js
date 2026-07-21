@@ -27,7 +27,11 @@ export class SpatialGrid {
   }
 
   clear() {
-    this.map.clear();
+    // Reuse bucket arrays instead of destroying them — avoids thousands of
+    // Array allocations per tick. Just truncate each bucket to length 0.
+    for (const bucket of this.map.values()) {
+      bucket.length = 0;
+    }
   }
 
   insert(item) {

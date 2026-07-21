@@ -114,7 +114,8 @@ export class Snake {
     // Each body point needs ~POINT_DIST units of travel = POINT_DIST/speed ticks.
     const needSamples = Math.ceil(this.points * CONFIG.POINT_DIST / Math.max(1, speed)) * 2 + 16;
     if (needSamples > this.maxSamples) this.maxSamples = needSamples;
-    if (this.samples.length > this.maxSamples) {
+    // Only compact when buffer is 2x oversized to avoid O(N) splice every tick.
+    if (this.samples.length > this.maxSamples * 2 + 32) {
       this.samples.splice(0, this.samples.length - this.maxSamples);
     }
 
@@ -236,20 +237,24 @@ export class Snake {
 
   // Pack body into a flat Int16Array [x0,y0,x1,y1,...] for networking.
   // When downsampling, interpolates midpoints to keep curves smooth.
+  // Reuses a pre-sized buffer to avoid heap allocation per call.
   packBody(maxPoints) {
     this.rebuildBodyIfNeeded();
     const len = this._bodyLen;
+    const needed = Math.max(len, maxPoints) * 2;
+    if (!this._packBuf || this._packBuf.length < needed) {
+      this._packBuf = new Int16Array(needed + 64);
+    }
+    const out = this._packBuf;
     if (len <= maxPoints) {
-      const out = new Int16Array(len * 2);
       let oi = 0;
       for (let i = 0; i < len; i++) {
         out[oi++] = Math.round(this._bodyX[i]);
         out[oi++] = Math.round(this._bodyY[i]);
       }
-      return out;
+      return out.subarray(0, oi);
     }
     // Downsample with midpoint interpolation to preserve curves.
-    const out = new Int16Array(maxPoints * 2);
     let oi = 0;
     const ratio = (len - 1) / (maxPoints - 1);
     for (let i = 0; i < maxPoints; i++) {
@@ -260,7 +265,7 @@ export class Snake {
       out[oi++] = Math.round(this._bodyX[lo] + (this._bodyX[hi] - this._bodyX[lo]) * t);
       out[oi++] = Math.round(this._bodyY[lo] + (this._bodyY[hi] - this._bodyY[lo]) * t);
     }
-    return out;
+    return out.subarray(0, oi);
   }
 
   // Returns true if the head is outside the world circle.

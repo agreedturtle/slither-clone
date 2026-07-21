@@ -7,14 +7,14 @@
 
 export default {
   // --- Simulation ----------------------------------------------------------
-  TICK_HZ: 20,                  // server ticks per second
+  TICK_HZ: 15,                  // server ticks per second
 
   // --- World ---------------------------------------------------------------
-  WORLD_RADIUS: 20000,           // circular arena radius; leaving it = death
-  FOOD_TARGET: 28000,            // how many food pellets exist at any time
+  WORLD_RADIUS: 15000,           // circular arena radius; leaving it = death
+  FOOD_TARGET: 15000,            // how many food pellets exist at any time
 
   // --- Population ----------------------------------------------------------
-  BOT_TARGET: 50,               // bots fill the world up to this count
+  BOT_TARGET: 30,               // bots fill the world up to this count
 
   // --- Movement ------------------------------------------------------------
   BASE_SPEED: 12,             // units per tick (normal movement)
@@ -27,7 +27,7 @@ export default {
   MAX_POINTS: 120000,            // hard cap on longest snake
   SCORE_PER_POINT: 5,           // score needed per extra body point (higher = slower growth)
   BODY_RADIUS_MIN: 8,           // thinnest the snake can be
-  BODY_RADIUS_MAX: 600,          // thickest the snake can be
+  BODY_RADIUS_MAX: 400,          // thickest the snake can be
 
   // --- Boost ---------------------------------------------------------------
   BOOST_COST_TICKS: 3,          // lose 1 score every N ticks while boosting (must be integer)
@@ -56,7 +56,7 @@ export default {
 
   // --- Network / client ----------------------------------------------------
   VIEW_RADIUS: 1400,            // how far around the head we send/draw entities
-  MAX_BODY_POINTS_NET: 6000,    // hard cap on points transmitted per snake
+  MAX_BODY_POINTS_NET: 3000,    // hard cap on points transmitted per snake
 
   // --- Leaderboard ---------------------------------------------------------
   LEADERBOARD_SIZE: 10,         // top N shown on leaderboard

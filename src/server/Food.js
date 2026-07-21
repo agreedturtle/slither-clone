@@ -23,13 +23,10 @@ export class Food {
     this.powerupAddQueue = [];    // powerups added since last broadcast
     this.powerupRemoveQueue = []; // powerup ids removed since last broadcast
     this.grid = null;             // rebuilt per tick by Room
+    this._nonDeathCount = 0;      // live count of non-death pellets (O(1) lookup)
   }
 
-  get count() {
-    let n = 0;
-    for (const p of this.pellets.values()) if (!p.death) n++;
-    return n;
-  }
+  get count() { return this._nonDeathCount; }
 
   // Single source of pellet ids. Both spawn paths go through this.
   _newId() { return _nextId++; }
@@ -49,6 +46,7 @@ export class Food {
       lifetime,
     };
     this.pellets.set(pellet.id, pellet);
+    if (!pellet.death) this._nonDeathCount++;
     this.addedQueue.push(pellet);
     return pellet;
   }
@@ -109,6 +107,7 @@ export class Food {
     const p = this.pellets.get(id);
     if (!p) return null;
     this.pellets.delete(id);
+    if (!p.death) this._nonDeathCount--;
     this.removedQueue.push(id);
     return p;
   }
@@ -119,6 +118,7 @@ export class Food {
     for (const [id, p] of this.pellets) {
       if (p.lifetime > 0 && now - p.born >= p.lifetime) {
         this.pellets.delete(id);
+        if (!p.death) this._nonDeathCount--;
         this.removedQueue.push(id);
       }
     }
