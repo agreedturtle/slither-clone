@@ -1,13 +1,13 @@
-import { mkdirSync, existsSync, renameSync, statSync, readdirSync } from 'node:fs';
+import { mkdirSync, existsSync, renameSync, statSync, readdirSync, unlinkSync } from 'node:fs';
 import { join } from 'node:path';
 
 const root = process.cwd();
-console.log('[setup] Root:', root);
-console.log('[setup] Files at root:', readdirSync(root).filter(f => !f.startsWith('.') && f !== 'node_modules'));
 
 function moveSafe(src, dest) {
   try {
     if (existsSync(src) && statSync(src).isFile()) {
+      const dir = join(dest, '..');
+      if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
       renameSync(src, dest);
       console.log('[setup] Moved:', src, '->', dest);
     }
@@ -16,41 +16,35 @@ function moveSafe(src, dest) {
   }
 }
 
-function mkdirp(dir) {
-  if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
-}
-
-// If src/server already exists and has files, we're good
+// Check if already set up
 if (existsSync(join(root, 'src', 'server', 'server.js'))) {
   console.log('[setup] Already set up.');
   process.exit(0);
 }
 
-mkdirp(join(root, 'src', 'server'));
-mkdirp(join(root, 'src', 'shared'));
-mkdirp(join(root, 'src', 'client', 'css'));
-mkdirp(join(root, 'src', 'client', 'js'));
+// The Windows zip creates files with backslash paths like src\server\server.js
+// We need to find these and move them to proper directories
+const allFiles = readdirSync(root, { withFileTypes: false });
 
-// Server files
-for (const f of ['server.js','Room.js','Snake.js','Bot.js','Food.js','Player.js','Database.js','SpatialGrid.js']) {
-  moveSafe(join(root, f), join(root, 'src', 'server', f));
+for (const name of allFiles) {
+  if (typeof name !== 'string' && !name.name) continue;
+  const fileName = typeof name === 'string' ? name : name.name;
+
+  // Check for Windows-style backslash paths
+  if (fileName.includes('\\')) {
+    const parts = fileName.split('\\');
+    const destPath = join(root, ...parts);
+    const destDir = join(destPath, '..');
+    if (!existsSync(destDir)) mkdirSync(destDir, { recursive: true });
+    moveSafe(join(root, fileName), destPath);
+  }
 }
 
-// Shared files
-for (const f of ['colors.js','constants.js','gameConfig.js','math.js','protocol.js','filter.js']) {
-  moveSafe(join(root, f), join(root, 'src', 'shared', f));
+// Also try the normal path
+if (existsSync(join(root, 'src', 'server', 'server.js'))) {
+  console.log('[setup] Setup complete!');
+  console.log('[setup] src/server:', readdirSync(join(root, 'src', 'server')));
+} else {
+  console.log('[setup] src/server/server.js still missing after setup!');
+  console.log('[setup] Root contents:', readdirSync(root).filter(f => !f.startsWith('.')));
 }
-
-// Client JS files
-for (const f of ['main.js','AdminPanel.js','Camera.js','Game.js','Hud.js','Input.js','Net.js','Renderer.js','Shop.js','ui.js']) {
-  moveSafe(join(root, f), join(root, 'src', 'client', 'js', f));
-}
-
-// Client CSS
-moveSafe(join(root, 'style.css'), join(root, 'src', 'client', 'css', 'style.css'));
-
-// Client HTML
-moveSafe(join(root, 'index.html'), join(root, 'src', 'client', 'index.html'));
-
-// Check result
-console.log('[setup] src/server contents:', existsSync(join(root, 'src', 'server')) ? readdirSync(join(root, 'src', 'server')) : 'MISSING');
