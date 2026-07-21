@@ -5,6 +5,7 @@
   "type": "module",
   "main": "src/server/server.js",
   "scripts": {
+    "postinstall": "node setup.js",
     "start": "node src/server/server.js"
   },
   "keywords": ["slither", "io", "game", "multiplayer", "websocket", "canvas"],
