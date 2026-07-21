@@ -24,10 +24,10 @@ export default {
   // --- Body / growth -------------------------------------------------------
   POINT_DIST: 3.5,              // visual spacing between body points
   MIN_POINTS: 10,               // smallest snake body length
-  MAX_POINTS: 120000,            // hard cap on longest snake
+  MAX_POINTS: 400000,            // hard cap on longest snake
   SCORE_PER_POINT: 5,           // score needed per extra body point (higher = slower growth)
   BODY_RADIUS_MIN: 8,           // thinnest the snake can be
-  BODY_RADIUS_MAX: 600,          // thickest the snake can be
+  BODY_RADIUS_MAX: 1000,          // thickest the snake can be
 
   // --- Boost ---------------------------------------------------------------
   BOOST_COST_TICKS: 3,          // lose 1 score every N ticks while boosting (must be integer)
@@ -46,7 +46,7 @@ export default {
 
   // --- Multiplier powerups --------------------------------------------------
   POWERUP_RADIUS: 22,           // visual radius of powerup potions
-  POWERUP_SPAWN_MAX: 70,         // max powerups on the map at once
+  POWERUP_SPAWN_MAX: 75,         // max powerups on the map at once
   POWERUP_LIFETIME_MIN: 60000,  // ms before powerup despawns (min)
   POWERUP_LIFETIME_MAX: 80000,  // ms before powerup despawns (max)
   POWERUP_SPAWN_INTERVAL: 4,    // ticks between spawn attempts

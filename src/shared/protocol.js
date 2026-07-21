@@ -63,7 +63,7 @@ export const S2C = {
   REMOVE_SNAKE: 7,   // { id:u32 }
   PONG: 8,           // { t:u32 }
   ERROR: 9,          // { msg:utf8 }
-  RADAR: 10,         // count:u16, [ id:u32, x:i16, y:i16, score:u16, isMe:u8 ]*   (minimap data: ALL alive snakes)
+  RADAR: 10,         // count:u16, [ id:u32, x:i16, y:i16, score:f64, angle:f32, isMe:u8, bodyLen:u8, body:i16*2*bodyLen ]*
   ADMIN_ACK: 11,     // { ok:u8, msg:utf8 }   result of an admin command
   MULTIPLIER: 12,    // { mult:u8, ticksLeft:u16 }   multiplier state update
   POWERUP_ADD: 13,   // count:u16, [ id:u32, x:f32, y:f32, mult:u8 ]*
