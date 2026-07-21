@@ -26,7 +26,7 @@ const __dirname = path.dirname(url.fileURLToPath(import.meta.url));
 const CLIENT_DIR = path.join(__dirname, '..', 'client');
 const SHARED_DIR = path.join(__dirname, '..', 'shared'); // served at /shared/*
 
-const PORT = Number(process.env.PORT) || 3000;
+const PORT = Number(process.env.PORT || process.env.SERVER_PORT) || 3000;
 const IDLE_TIMEOUT_MS = 60000; // drop clients we haven't heard from in 60s
 
 // --- MIME types for static serving -----------------------------------------
