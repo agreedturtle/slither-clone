@@ -100,24 +100,17 @@ export class Game {
       const prev = this.state.snakes.get(s.id);
       const newLen = s.points.length;
 
-      let nextPts, prevPts, renderPts;
+      const nextPts = new Float32Array(newLen);
+      for (let j = 0; j < newLen; j++) nextPts[j] = s.points[j];
+
+      let prevPts, renderPts;
       if (prev && prev.nextPts && prev.nextPts.length === newLen) {
-        // Reuse existing buffers — just copy data in with .set()
-        nextPts = prev.nextPts;
-        prevPts = prev.prevPts;
+        prevPts = prev.nextPts;
         renderPts = prev.renderPts;
-        nextPts.set(s.points);
       } else {
-        nextPts = new Float32Array(newLen);
-        for (let j = 0; j < newLen; j++) nextPts[j] = s.points[j];
-        if (prev && prev.renderPts && prev.renderPts.length === newLen) {
-          prevPts = prev.renderPts;
-          renderPts = prev.renderPts;
-        } else {
-          prevPts = nextPts;
-          renderPts = new Float32Array(newLen);
-          for (let j = 0; j < newLen; j++) renderPts[j] = nextPts[j];
-        }
+        prevPts = nextPts;
+        renderPts = new Float32Array(newLen);
+        for (let j = 0; j < newLen; j++) renderPts[j] = nextPts[j];
       }
 
       if (prev) {

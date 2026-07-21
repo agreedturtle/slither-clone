@@ -114,8 +114,7 @@ export class Snake {
     // Each body point needs ~POINT_DIST units of travel = POINT_DIST/speed ticks.
     const needSamples = Math.ceil(this.points * CONFIG.POINT_DIST / Math.max(1, speed)) * 2 + 16;
     if (needSamples > this.maxSamples) this.maxSamples = needSamples;
-    // Only compact when buffer is 2x oversized to avoid O(N) splice every tick.
-    if (this.samples.length > this.maxSamples * 2 + 32) {
+    if (this.samples.length > this.maxSamples) {
       this.samples.splice(0, this.samples.length - this.maxSamples);
     }
 
