@@ -25,7 +25,7 @@ const adminPanel = new AdminPanel(net);
 const killFeed = new KillFeed();
 
 const game = new Game({ net, renderer, camera, input, hud, ui });
-const shop = new Shop(net);
+const shop = new Shop(net, ui);
 
 // ---- Auth state ----
 let authState = { token: null, username: null };

@@ -1,8 +1,9 @@
 import { SKINS, SKIN_PRICES, SKIN_TIERS, skinTier } from '../../shared/colors.js';
 
 export class Shop {
-  constructor(net) {
+  constructor(net, ui) {
     this.net = net;
+    this.ui = ui;
     this.coins = 0;
     this.unlockedSkins = new Set([0, 1, 2, 3]);
     this._onShopData = this._onShopData.bind(this);
@@ -30,6 +31,7 @@ export class Shop {
     this.coins = d.coins;
     this.unlockedSkins = new Set(d.unlockedSkins.split(',').map(Number).filter(n => !isNaN(n)));
     this._updateUI();
+    if (this.ui) this.ui.setUnlockedSkins(this.unlockedSkins);
   }
 
   _onShopResult(d) {
@@ -40,6 +42,7 @@ export class Shop {
       }
     }
     this._updateUI();
+    if (this.ui) this.ui.setUnlockedSkins(this.unlockedSkins);
     if (d.msg) this._flashMsg(d.msg, d.ok);
   }
 
