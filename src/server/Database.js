@@ -1,23 +1,19 @@
-import pg from 'pg';
+import mysql from 'mysql2/promise';
 import { randomBytes, scryptSync, timingSafeEqual } from 'node:crypto';
 import { filterName } from '../shared/filter.js';
-
-const { Pool } = pg;
 
 export class Database {
   constructor() {
     this.pool = null;
     this.ready = this._init();
-    this.tokens = new Map(); // token -> { username, expiresAt }
+    this.tokens = new Map();
   }
 
   async _init() {
-    // Check common env var names, plus any var containing 'database' or 'postgres' or 'url'
-    let url = process.env.DATABASE_URL || process.env.POSTGRES_URL || process.env.POSTGRESQL_URL || process.env.DB_URL || process.env.DATABASE_PRIVATE_URL;
+    let url = process.env.DATABASE_URL || process.env.DB_URL || process.env.DATABASE_PRIVATE_URL;
     if (!url) {
-      // Brute force: find any env var that looks like a postgres connection string
       for (const [k, v] of Object.entries(process.env)) {
-        if (typeof v === 'string' && v.startsWith('postgres')) {
+        if (typeof v === 'string' && (v.startsWith('mysql') || v.startsWith('jdbc:mysql'))) {
           url = v;
           console.log(`[db] Found DB in env var: ${k}`);
           break;
@@ -30,10 +26,21 @@ export class Database {
       return;
     }
     try {
-      this.pool = new Pool({ connectionString: url, ssl: { rejectUnauthorized: false } });
+      let config;
+      if (url.startsWith('jdbc:')) {
+        const m = url.match(/jdbc:mysql:\/\/([^:]+):(\d+)\/([^?]+)/);
+        if (!m) throw new Error('Invalid JDBC URL');
+        const auth = url.match(/\/\/([^@]+)@/);
+        const user = auth ? auth[1].split(':')[0] : '';
+        const pass = auth ? decodeURIComponent(auth[1].split(':')[1] || '') : '';
+        config = { host: m[1], port: Number(m[2]), database: m[3], user, password: pass };
+      } else {
+        config = { uri: url, ssl: { rejectUnauthorized: false } };
+      }
+      this.pool = await mysql.createPool(config);
       await this.pool.query(`
         CREATE TABLE IF NOT EXISTS users (
-          username TEXT PRIMARY KEY,
+          username VARCHAR(64) PRIMARY KEY,
           password_hash TEXT NOT NULL,
           salt TEXT NOT NULL,
           created_at BIGINT NOT NULL
@@ -41,24 +48,27 @@ export class Database {
       `);
       await this.pool.query(`
         CREATE TABLE IF NOT EXISTS stats (
-          username TEXT PRIMARY KEY REFERENCES users(username),
+          username VARCHAR(64) PRIMARY KEY,
           high_score BIGINT DEFAULT 0,
-          total_kills INTEGER DEFAULT 0,
-          headshots INTEGER DEFAULT 0,
-          games_played INTEGER DEFAULT 0,
-          deaths INTEGER DEFAULT 0,
-          coins INTEGER DEFAULT 0,
+          total_kills INT DEFAULT 0,
+          headshots INT DEFAULT 0,
+          games_played INT DEFAULT 0,
+          deaths INT DEFAULT 0,
+          coins INT DEFAULT 0,
           unlocked_skins TEXT DEFAULT '0,1,2,3',
-          daily_claimed_at BIGINT DEFAULT 0
+          daily_claimed_at BIGINT DEFAULT 0,
+          FOREIGN KEY (username) REFERENCES users(username)
         )
       `);
-      // Migrate old INTEGER high_score columns to BIGINT if needed.
-      await this.pool.query(`ALTER TABLE stats ALTER COLUMN high_score TYPE BIGINT`).catch(() => {});
-      // Migrate: add coins/unlocked_skins/daily columns if missing
-      await this.pool.query(`ALTER TABLE stats ADD COLUMN IF NOT EXISTS coins INTEGER DEFAULT 0`).catch(() => {});
-      await this.pool.query(`ALTER TABLE stats ADD COLUMN IF NOT EXISTS unlocked_skins TEXT DEFAULT '0,1,2,3'`).catch(() => {});
-      await this.pool.query(`ALTER TABLE stats ADD COLUMN IF NOT EXISTS daily_claimed_at BIGINT DEFAULT 0`).catch(() => {});
-      console.log('[db] PostgreSQL connected, tables ready.');
+      // Migrate: add columns if missing
+      for (const col of [
+        ['coins', 'INT DEFAULT 0'],
+        ['unlocked_skins', "TEXT DEFAULT '0,1,2,3'"],
+        ['daily_claimed_at', 'BIGINT DEFAULT 0']
+      ]) {
+        await this.pool.query(`ALTER TABLE stats ADD COLUMN ${col[0]} ${col[1]}`).catch(() => {});
+      }
+      console.log('[db] MySQL connected, tables ready.');
     } catch (e) {
       console.error('[db] Failed to connect:', e.message);
       this.pool = null;
@@ -67,13 +77,14 @@ export class Database {
 
   _q(text, params) {
     if (!this.pool) return Promise.resolve({ rows: [] });
-    return this.pool.query(text, params);
+    const mysqlText = text.replace(/\$(\d+)/g, (_, i) => '?');
+    return this.pool.query(mysqlText, params).then(([rows]) => ({ rows }));
   }
 
   get isReady() { return !!this.pool; }
 
   register(username, password) {
-    if (!this.pool) return Promise.resolve({ ok: false, msg: 'Accounts unavailable — no database configured' });
+    if (!this.pool) return Promise.resolve({ ok: false, msg: 'Accounts unavailable' });
     const name = filterName(username);
     if (!name) return { ok: false, msg: 'Inappropriate username' };
     if (name.length < 2 || name.length > 16) return { ok: false, msg: 'Name must be 2-16 characters' };
@@ -82,10 +93,10 @@ export class Database {
     const salt = randomBytes(16).toString('hex');
     const hash = scryptSync(password, salt, 64).toString('hex');
 
-    return this._q('INSERT INTO users (username, password_hash, salt, created_at) VALUES ($1, $2, $3, $4) ON CONFLICT DO NOTHING', [name, hash, salt, Date.now()])
+    return this._q('INSERT IGNORE INTO users (username, password_hash, salt, created_at) VALUES (?, ?, ?, ?)', [name, hash, salt, Date.now()])
       .then(r => {
-        if (r.rowCount === 0) return { ok: false, msg: 'Username already taken' };
-        return this._q('INSERT INTO stats (username) VALUES ($1) ON CONFLICT DO NOTHING', [name])
+        if (r.rows.affectedRows === 0) return { ok: false, msg: 'Username already taken' };
+        return this._q('INSERT IGNORE INTO stats (username) VALUES (?)', [name])
           .then(() => {
             const token = this._createToken(name);
             return { ok: true, token, username: name };
@@ -95,9 +106,9 @@ export class Database {
   }
 
   login(username, password) {
-    if (!this.pool) return Promise.resolve({ ok: false, msg: 'Accounts unavailable — no database configured' });
+    if (!this.pool) return Promise.resolve({ ok: false, msg: 'Accounts unavailable' });
     const name = (username || '').trim().toLowerCase();
-    return this._q('SELECT password_hash, salt FROM users WHERE username = $1', [name])
+    return this._q('SELECT password_hash, salt FROM users WHERE username = ?', [name])
       .then(r => {
         if (r.rows.length === 0) return { ok: false, msg: 'Account not found' };
         const { password_hash, salt } = r.rows[0];
@@ -128,7 +139,7 @@ export class Database {
 
   async getStats(username) {
     try {
-      const r = await this._q('SELECT * FROM stats WHERE username = $1', [username]);
+      const r = await this._q('SELECT * FROM stats WHERE username = ?', [username]);
       if (r.rows.length === 0) return { highScore: 0, totalKills: 0, headshots: 0, gamesPlayed: 0, deaths: 0, coins: 0, unlockedSkins: '0,1,2,3', dailyClaimedAt: 0 };
       const s = r.rows[0];
       return { highScore: s.high_score, totalKills: s.total_kills, headshots: s.headshots, gamesPlayed: s.games_played, deaths: s.deaths, coins: s.coins || 0, unlockedSkins: s.unlocked_skins || '0,1,2,3', dailyClaimedAt: s.daily_claimed_at || 0 };
@@ -137,16 +148,15 @@ export class Database {
 
   async recordGame(username) {
     try {
-      await this._q('INSERT INTO stats (username, games_played) VALUES ($1, 1) ON CONFLICT (username) DO UPDATE SET games_played = stats.games_played + 1', [username]);
+      await this._q('INSERT INTO stats (username, games_played) VALUES (?, 1) ON DUPLICATE KEY UPDATE games_played = games_played + 1', [username]);
     } catch {}
   }
 
   async recordDeath(username, score) {
     try {
       await this._q(
-        `INSERT INTO stats (username, deaths, high_score) VALUES ($1, 1, $2)
-         ON CONFLICT (username) DO UPDATE SET deaths = stats.deaths + 1, high_score = GREATEST(stats.high_score, $2)`,
-        [username, Math.round(score)]
+        'INSERT INTO stats (username, deaths, high_score) VALUES (?, 1, ?) ON DUPLICATE KEY UPDATE deaths = deaths + 1, high_score = GREATEST(high_score, ?)',
+        [username, Math.round(score), Math.round(score)]
       );
     } catch {}
   }
@@ -154,9 +164,8 @@ export class Database {
   async recordKill(killerName, isHeadshot) {
     try {
       await this._q(
-        `INSERT INTO stats (username, total_kills, headshots) VALUES ($1, 1, $2)
-         ON CONFLICT (username) DO UPDATE SET total_kills = stats.total_kills + 1, headshots = stats.headshots + $2`,
-        [killerName, isHeadshot ? 1 : 0]
+        'INSERT INTO stats (username, total_kills, headshots) VALUES (?, 1, ?) ON DUPLICATE KEY UPDATE total_kills = total_kills + 1, headshots = headshots + ?',
+        [killerName, isHeadshot ? 1 : 0, isHeadshot ? 1 : 0]
       );
     } catch {}
   }
@@ -178,27 +187,27 @@ export class Database {
 
   async addCoins(username, amount) {
     try {
-      await this._q('UPDATE stats SET coins = coins + $2 WHERE username = $1', [username, amount]);
+      await this._q('UPDATE stats SET coins = coins + ? WHERE username = ?', [amount, username]);
     } catch {}
   }
 
   async getCoins(username) {
     try {
-      const r = await this._q('SELECT coins FROM stats WHERE username = $1', [username]);
+      const r = await this._q('SELECT coins FROM stats WHERE username = ?', [username]);
       return r.rows.length > 0 ? (r.rows[0].coins || 0) : 0;
     } catch { return 0; }
   }
 
   async getUnlockedSkins(username) {
     try {
-      const r = await this._q('SELECT unlocked_skins FROM stats WHERE username = $1', [username]);
+      const r = await this._q('SELECT unlocked_skins FROM stats WHERE username = ?', [username]);
       return r.rows.length > 0 ? (r.rows[0].unlocked_skins || '0,1,2,3') : '0,1,2,3';
     } catch { return '0,1,2,3'; }
   }
 
   async buySkin(username, skinId, price) {
     try {
-      const r = await this._q('SELECT coins, unlocked_skins FROM stats WHERE username = $1', [username]);
+      const r = await this._q('SELECT coins, unlocked_skins FROM stats WHERE username = ?', [username]);
       if (r.rows.length === 0) return { ok: false, msg: 'Account not found' };
       const s = r.rows[0];
       const coins = s.coins || 0;
@@ -206,14 +215,14 @@ export class Database {
       if (skins.includes(skinId)) return { ok: false, msg: 'Already owned' };
       if (coins < price) return { ok: false, msg: 'Not enough coins' };
       skins.push(skinId);
-      await this._q('UPDATE stats SET coins = coins - $2, unlocked_skins = $3 WHERE username = $1', [username, price, skins.join(',')]);
+      await this._q('UPDATE stats SET coins = coins - ?, unlocked_skins = ? WHERE username = ?', [price, skins.join(','), username]);
       return { ok: true, coins: coins - price, unlockedSkins: skins.join(',') };
     } catch (e) { console.error('[db] buySkin:', e.message); return { ok: false, msg: 'Database error' }; }
   }
 
   async claimDaily(username) {
     try {
-      const r = await this._q('SELECT daily_claimed_at FROM stats WHERE username = $1', [username]);
+      const r = await this._q('SELECT daily_claimed_at FROM stats WHERE username = ?', [username]);
       if (r.rows.length === 0) return { ok: false, msg: 'Account not found' };
       const lastClaim = r.rows[0].daily_claimed_at || 0;
       const now = Date.now();
@@ -225,7 +234,7 @@ export class Database {
         const mins = Math.floor((waitMs % 3600000) / 60000);
         return { ok: false, msg: `Next daily in ${hours}h ${mins}m` };
       }
-      await this._q('UPDATE stats SET coins = coins + 50, daily_claimed_at = $2 WHERE username = $1', [username, now]);
+      await this._q('UPDATE stats SET coins = coins + 50, daily_claimed_at = ? WHERE username = ?', [now, username]);
       const newCoins = await this.getCoins(username);
       return { ok: true, coins: newCoins };
     } catch (e) { console.error('[db] claimDaily:', e.message); return { ok: false, msg: 'Database error' }; }
@@ -234,7 +243,7 @@ export class Database {
   async resetAllShopData() {
     if (!this.pool) return;
     try {
-      await this._q('UPDATE stats SET coins = 0, unlocked_skins = \'0,1,2,3\', daily_claimed_at = 0');
+      await this._q("UPDATE stats SET coins = 0, unlocked_skins = '0,1,2,3', daily_claimed_at = 0");
     } catch {}
   }
 }

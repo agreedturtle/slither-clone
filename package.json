@@ -8,10 +8,17 @@
     "postinstall": "node setup.js",
     "start": "node src/server/server.js"
   },
-  "keywords": ["slither", "io", "game", "multiplayer", "websocket", "canvas"],
+  "keywords": [
+    "slither",
+    "io",
+    "game",
+    "multiplayer",
+    "websocket",
+    "canvas"
+  ],
   "license": "MIT",
   "dependencies": {
-    "pg": "^8.13.0",
+    "mysql2": "^3.23.1",
     "typescript": "^5.7.0",
     "ws": "^8.18.0"
   }
