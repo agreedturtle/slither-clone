@@ -254,7 +254,7 @@ wss.on('connection', (ws) => {
 // --- Go ---------------------------------------------------------------------
 async function start() {
   await db.ready;
-  httpServer.listen(PORT, () => {
+  httpServer.listen(PORT, '0.0.0.0', () => {
     console.log(`\n  Slither clone running:\n    http://localhost:${PORT}\n`);
     console.log(`  World: humans + ${botCount()} bots. Open multiple tabs to play together.\n`);
   });
