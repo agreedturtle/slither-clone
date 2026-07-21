@@ -1,22 +1,28 @@
-import { mkdirSync, existsSync, renameSync, statSync } from 'node:fs';
+import { mkdirSync, existsSync, renameSync, statSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 
 const root = process.cwd();
+console.log('[setup] Root:', root);
+console.log('[setup] Files at root:', readdirSync(root).filter(f => !f.startsWith('.') && f !== 'node_modules'));
 
 function moveSafe(src, dest) {
   try {
     if (existsSync(src) && statSync(src).isFile()) {
       renameSync(src, dest);
+      console.log('[setup] Moved:', src, '->', dest);
     }
-  } catch (_) {}
+  } catch (e) {
+    console.log('[setup] Move failed:', src, e.message);
+  }
 }
 
 function mkdirp(dir) {
   if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
 }
 
-// If src/server already exists, we're good
+// If src/server already exists and has files, we're good
 if (existsSync(join(root, 'src', 'server', 'server.js'))) {
+  console.log('[setup] Already set up.');
   process.exit(0);
 }
 
@@ -46,4 +52,5 @@ moveSafe(join(root, 'style.css'), join(root, 'src', 'client', 'css', 'style.css'
 // Client HTML
 moveSafe(join(root, 'index.html'), join(root, 'src', 'client', 'index.html'));
 
-console.log('[setup] Directory structure created.');
+// Check result
+console.log('[setup] src/server contents:', existsSync(join(root, 'src', 'server')) ? readdirSync(join(root, 'src', 'server')) : 'MISSING');
