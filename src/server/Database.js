@@ -10,33 +10,14 @@ export class Database {
   }
 
   async _init() {
-    let url = process.env.DATABASE_URL || process.env.DB_URL || process.env.DATABASE_PRIVATE_URL;
-    if (!url) {
-      for (const [k, v] of Object.entries(process.env)) {
-        if (typeof v === 'string' && (v.startsWith('mysql') || v.startsWith('jdbc:mysql'))) {
-          url = v;
-          console.log(`[db] Found DB in env var: ${k}`);
-          break;
-        }
-      }
-    }
-    if (!url) {
-      console.warn('[db] No DATABASE_URL found. All env vars:', Object.keys(process.env).join(', '));
-      console.warn('[db] Stats will not persist.');
-      return;
-    }
+    const config = {
+      host: '10.66.0.10',
+      port: 3306,
+      user: 'u155_4210xdVf0O',
+      password: '^ZhEsd5QAM!YjGW1jtXDJ=^h',
+      database: 's155_slither',
+    };
     try {
-      let config;
-      if (url.startsWith('jdbc:')) {
-        const m = url.match(/jdbc:mysql:\/\/([^:]+):(\d+)\/([^?]+)/);
-        if (!m) throw new Error('Invalid JDBC URL');
-        const auth = url.match(/\/\/([^@]+)@/);
-        const user = auth ? auth[1].split(':')[0] : '';
-        const pass = auth ? decodeURIComponent(auth[1].split(':')[1] || '') : '';
-        config = { host: m[1], port: Number(m[2]), database: m[3], user, password: pass };
-      } else {
-        config = { uri: url, ssl: { rejectUnauthorized: false } };
-      }
       this.pool = await mysql.createPool(config);
       await this.pool.query(`
         CREATE TABLE IF NOT EXISTS users (
