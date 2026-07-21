@@ -76,7 +76,7 @@ export const CONFIG = {
 
 export function scoreToPoints(score) {
   const p = CONFIG.MIN_POINTS + Math.floor(score / CONFIG.SCORE_PER_POINT);
-  return Math.min(Math.max(CONFIG.MIN_POINTS, p), 6000);
+  return Math.min(Math.max(CONFIG.MIN_POINTS, p), 4000);
 }
 
 export function pointsToScore(points) {
@@ -84,7 +84,7 @@ export function pointsToScore(points) {
 }
 
 export function bodyRadiusFromScore(score) {
-  const t = CONFIG.BODY_RADIUS_MIN + Math.pow(score, 0.4) * 0.8;
+  const t = CONFIG.BODY_RADIUS_MIN + Math.pow(score, 0.35) * 0.7;
   return Math.max(CONFIG.BODY_RADIUS_MIN, Math.min(t, CONFIG.BODY_RADIUS_MAX));
 }
 
