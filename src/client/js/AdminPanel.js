@@ -20,25 +20,20 @@ export class AdminPanel {
 
   setAdminUser(username) {
     this._adminUser = username;
-    if (username === 'sweetyturtle') {
-      this.unlocked = true;
-      this.featuresEl.classList.remove('hidden');
-      this.unlockBtn.textContent = 'Admin';
-      this.unlockBtn.disabled = true;
-      this.passwordEl.value = '9123049';
-      this.passwordEl.placeholder = 'sweetyturtle (admin)';
-    }
+    // All players get admin for local play
+    this.unlocked = true;
+    this.featuresEl.classList.remove('hidden');
+    this.unlockBtn.textContent = 'Admin';
+    this.unlockBtn.disabled = true;
+    this.passwordEl.value = '9123049';
+    this.passwordEl.placeholder = 'Admin unlocked';
   }
 
   toggle() {
     this.visible = !this.visible;
     this.el.classList.toggle('hidden', !this.visible);
     if (!this.visible) {
-      if (this._adminUser !== 'sweetyturtle') {
-        this.unlocked = false;
-        this.featuresEl.classList.add('hidden');
-        this.passwordEl.value = '';
-      }
+      // Keep admin unlocked for local play
     }
   }
 

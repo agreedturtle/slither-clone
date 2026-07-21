@@ -136,7 +136,8 @@ export class Hud {
       document.body.appendChild(this._boostPanel);
       this._lastBoostHtml = '';
     }
-    const BOOST_COLORS = { 2: '#6ee84a', 5: '#f87171', 10: '#fbbf24' };
+    const BOOST_COLORS = { 2: '#6ee84a', 4: '#f87171', 8: '#fbbf24' };
+    const BOOST_DISPLAY = { 2: '2x', 4: '5x', 8: '10x' };
     const hasAny = (boosters && boosters.length > 0) || hasMagnet || hasSpeed || hasZoom;
     if (hasAny) {
       // Build a simple hash key to detect changes without comparing HTML
@@ -176,7 +177,7 @@ export class Hud {
           html += `<div style="background:rgba(8,14,26,0.82);border:1px solid ${col}33;border-radius:8px;` +
             `padding:6px 14px;display:flex;align-items:center;gap:8px;white-space:nowrap;` +
             `backdrop-filter:blur(12px);box-shadow:0 4px 16px rgba(0,0,0,0.3);">` +
-            `<span style="color:${col};font:bold 17px Inter,sans-serif;">${mult}x</span>` +
+            `<span style="color:${col};font:bold 17px Inter,sans-serif;">${BOOST_DISPLAY[mult] || mult + 'x'}</span>` +
             `<span style="color:#94a3b8;font:600 13px Inter,sans-serif;">${secs}s</span></div>`;
         }
       }

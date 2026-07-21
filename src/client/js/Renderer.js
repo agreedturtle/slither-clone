@@ -251,7 +251,7 @@ export class Renderer {
       ctx.font = `bold ${Math.max(9, r * 0.65)}px sans-serif`;
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
-      ctx.fillText(pup.type === 'magnet' ? 'M' : pup.type === 'speed' ? 'S' : pup.type === 'zoom' ? 'Z' : (pup.mult + 'x'), px, ppy + r * 0.35);
+      ctx.fillText(pup.type === 'magnet' ? 'M' : pup.type === 'speed' ? 'S' : pup.type === 'zoom' ? 'Z' : (pup.mult === 4 ? '5x' : pup.mult === 8 ? '10x' : (pup.mult + 'x')), px, ppy + r * 0.35);
     }
     ctx.globalAlpha = 1;
   }

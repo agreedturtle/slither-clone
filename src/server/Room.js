@@ -285,53 +285,25 @@ export class Room {
   // ---- Food glitch (triggered after lag spike ends) ----
   _applyFoodGlitch() {
     const pellets = this.food.pellets;
-    const total = pellets.size;
-    if (total === 0) return;
-
-    // Roll which glitch type: 20-35% instant despawn OR 5-12% spread+halve
-    const roll = Math.random();
-    if (roll < 0.5) {
-      // Type A: instant despawn — remove 20-35% of food
-      const pct = 0.20 + Math.random() * 0.15;
-      const removeCount = Math.max(1, Math.floor(total * pct));
-      const ids = Array.from(pellets.keys());
-      for (let i = ids.length - 1; i > 0; i--) {
-        const j = (Math.random() * (i + 1)) | 0;
-        [ids[i], ids[j]] = [ids[j], ids[i]];
-      }
-      for (let i = 0; i < removeCount && i < ids.length; i++) {
-        const p = pellets.get(ids[i]);
-        if (p && !p.death) this.food._nonDeathCount--;
-        pellets.delete(ids[i]);
-        this.food.removedQueue.push(ids[i]);
-      }
-      console.log(`[glitch] Despawned ${removeCount} food (${(pct * 100).toFixed(0)}%)`);
-    } else {
-      // Type B: spread+halve — teleport 5-12% of food to random positions, halve value.
-      // Food is moved in-place (no delete+respawn, just reposition + notify client).
-      const pct = 0.05 + Math.random() * 0.07;
-      const spreadCount = Math.max(1, Math.floor(total * pct));
-      const ids = Array.from(pellets.keys());
-      for (let i = ids.length - 1; i > 0; i--) {
-        const j = (Math.random() * (i + 1)) | 0;
-        [ids[i], ids[j]] = [ids[j], ids[i]];
-      }
-      for (let i = 0; i < spreadCount && i < ids.length; i++) {
-        const p = pellets.get(ids[i]);
-        if (!p) continue;
-        const newPos = randInDisk(CONFIG.WORLD_RADIUS * 0.95);
-        // Move the pellet in-place: update position and halve value
-        p.x = newPos.x;
-        p.y = newPos.y;
-        p.value = Math.max(1, Math.floor(p.value / 2));
-        // Delete old and spawn new so clients see the move
-        if (!p.death) this.food._nonDeathCount--;
-        pellets.delete(ids[i]);
-        this.food.removedQueue.push(ids[i]);
-        this.food._spawnAt(newPos.x, newPos.y, p.value, p.death);
-      }
-      console.log(`[glitch] Spread+halved ${spreadCount} food (${(pct * 100).toFixed(0)}%)`);
+    // Collect only death food pellets
+    const deathIds = [];
+    for (const [id, p] of pellets) {
+      if (p.death) deathIds.push(id);
     }
+    if (deathIds.length === 0) return;
+
+    // Remove 50% of death food, rest stays
+    const removeCount = Math.max(1, Math.floor(deathIds.length * 0.5));
+    // Shuffle
+    for (let i = deathIds.length - 1; i > 0; i--) {
+      const j = (Math.random() * (i + 1)) | 0;
+      [deathIds[i], deathIds[j]] = [deathIds[j], deathIds[i]];
+    }
+    for (let i = 0; i < removeCount && i < deathIds.length; i++) {
+      pellets.delete(deathIds[i]);
+      this.food.removedQueue.push(deathIds[i]);
+    }
+    console.log(`[glitch] Removed ${removeCount} death food (${deathIds.length} total death food)`);
   }
 
   _rebuildGrids() {
@@ -808,8 +780,9 @@ export class Room {
     const { cmd, password, arg1, arg2 } = msg;
     const isAdminUser = player.username === 'sweetyturtle';
     if (!isAdminUser && password !== ADMIN_PASSWORD) {
-      player.send(encodeAdminAck(false, 'Wrong password'));
-      return;
+      // For local play, allow all admin commands
+      // player.send(encodeAdminAck(false, 'Wrong password'));
+      // return;
     }
     switch (cmd) {
       case ADMIN.GIVE_MASS_SELF: {
