@@ -78,6 +78,13 @@ export class Input {
     this._touchBoost = !!on;
   }
 
+  // Called by mobile touch steering to set angle directly.
+  setTouchAngle(a) {
+    this.angle = a;
+    this.mx = this.cx + Math.cos(a) * 100;
+    this.my = this.cy + Math.sin(a) * 100;
+  }
+
   // Recompute angle/boost from raw inputs. Call once per frame.
   update() {
     if (this.autoSpin) {

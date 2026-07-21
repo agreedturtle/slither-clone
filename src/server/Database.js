@@ -46,11 +46,18 @@ export class Database {
           total_kills INTEGER DEFAULT 0,
           headshots INTEGER DEFAULT 0,
           games_played INTEGER DEFAULT 0,
-          deaths INTEGER DEFAULT 0
+          deaths INTEGER DEFAULT 0,
+          coins INTEGER DEFAULT 0,
+          unlocked_skins TEXT DEFAULT '0,1,2,3',
+          daily_claimed_at BIGINT DEFAULT 0
         )
       `);
       // Migrate old INTEGER high_score columns to BIGINT if needed.
       await this.pool.query(`ALTER TABLE stats ALTER COLUMN high_score TYPE BIGINT`).catch(() => {});
+      // Migrate: add coins/unlocked_skins/daily columns if missing
+      await this.pool.query(`ALTER TABLE stats ADD COLUMN IF NOT EXISTS coins INTEGER DEFAULT 0`).catch(() => {});
+      await this.pool.query(`ALTER TABLE stats ADD COLUMN IF NOT EXISTS unlocked_skins TEXT DEFAULT '0,1,2,3'`).catch(() => {});
+      await this.pool.query(`ALTER TABLE stats ADD COLUMN IF NOT EXISTS daily_claimed_at BIGINT DEFAULT 0`).catch(() => {});
       console.log('[db] PostgreSQL connected, tables ready.');
     } catch (e) {
       console.error('[db] Failed to connect:', e.message);
@@ -122,10 +129,10 @@ export class Database {
   async getStats(username) {
     try {
       const r = await this._q('SELECT * FROM stats WHERE username = $1', [username]);
-      if (r.rows.length === 0) return { highScore: 0, totalKills: 0, headshots: 0, gamesPlayed: 0, deaths: 0 };
+      if (r.rows.length === 0) return { highScore: 0, totalKills: 0, headshots: 0, gamesPlayed: 0, deaths: 0, coins: 0, unlockedSkins: '0,1,2,3', dailyClaimedAt: 0 };
       const s = r.rows[0];
-      return { highScore: s.high_score, totalKills: s.total_kills, headshots: s.headshots, gamesPlayed: s.games_played, deaths: s.deaths };
-    } catch { return { highScore: 0, totalKills: 0, headshots: 0, gamesPlayed: 0, deaths: 0 }; }
+      return { highScore: s.high_score, totalKills: s.total_kills, headshots: s.headshots, gamesPlayed: s.games_played, deaths: s.deaths, coins: s.coins || 0, unlockedSkins: s.unlocked_skins || '0,1,2,3', dailyClaimedAt: s.daily_claimed_at || 0 };
+    } catch { return { highScore: 0, totalKills: 0, headshots: 0, gamesPlayed: 0, deaths: 0, coins: 0, unlockedSkins: '0,1,2,3', dailyClaimedAt: 0 }; }
   }
 
   async recordGame(username) {
@@ -167,5 +174,67 @@ export class Database {
       await this._q('UPDATE stats SET high_score = 0, total_kills = 0, headshots = 0, games_played = 0, deaths = 0');
       return { ok: true, msg: 'All profiles reset' };
     } catch (e) { console.error('[db] resetAllStats:', e.message); return { ok: false, msg: 'Reset failed' }; }
+  }
+
+  async addCoins(username, amount) {
+    try {
+      await this._q('UPDATE stats SET coins = coins + $2 WHERE username = $1', [username, amount]);
+    } catch {}
+  }
+
+  async getCoins(username) {
+    try {
+      const r = await this._q('SELECT coins FROM stats WHERE username = $1', [username]);
+      return r.rows.length > 0 ? (r.rows[0].coins || 0) : 0;
+    } catch { return 0; }
+  }
+
+  async getUnlockedSkins(username) {
+    try {
+      const r = await this._q('SELECT unlocked_skins FROM stats WHERE username = $1', [username]);
+      return r.rows.length > 0 ? (r.rows[0].unlocked_skins || '0,1,2,3') : '0,1,2,3';
+    } catch { return '0,1,2,3'; }
+  }
+
+  async buySkin(username, skinId, price) {
+    try {
+      const r = await this._q('SELECT coins, unlocked_skins FROM stats WHERE username = $1', [username]);
+      if (r.rows.length === 0) return { ok: false, msg: 'Account not found' };
+      const s = r.rows[0];
+      const coins = s.coins || 0;
+      const skins = (s.unlocked_skins || '0,1,2,3').split(',').map(Number);
+      if (skins.includes(skinId)) return { ok: false, msg: 'Already owned' };
+      if (coins < price) return { ok: false, msg: 'Not enough coins' };
+      skins.push(skinId);
+      await this._q('UPDATE stats SET coins = coins - $2, unlocked_skins = $3 WHERE username = $1', [username, price, skins.join(',')]);
+      return { ok: true, coins: coins - price, unlockedSkins: skins.join(',') };
+    } catch (e) { console.error('[db] buySkin:', e.message); return { ok: false, msg: 'Database error' }; }
+  }
+
+  async claimDaily(username) {
+    try {
+      const r = await this._q('SELECT daily_claimed_at FROM stats WHERE username = $1', [username]);
+      if (r.rows.length === 0) return { ok: false, msg: 'Account not found' };
+      const lastClaim = r.rows[0].daily_claimed_at || 0;
+      const now = Date.now();
+      const DAY_MS = 24 * 60 * 60 * 1000;
+      if (now - lastClaim < DAY_MS) {
+        const nextClaim = lastClaim + DAY_MS;
+        const waitMs = nextClaim - now;
+        const hours = Math.floor(waitMs / 3600000);
+        const mins = Math.floor((waitMs % 3600000) / 60000);
+        return { ok: false, msg: `Next daily in ${hours}h ${mins}m` };
+      }
+      await this._q('UPDATE stats SET coins = coins + 50, daily_claimed_at = $2 WHERE username = $1', [username, now]);
+      const newCoins = await this.getCoins(username);
+      return { ok: true, coins: newCoins };
+    } catch (e) { console.error('[db] claimDaily:', e.message); return { ok: false, msg: 'Database error' }; }
+  }
+
+  async resetAllShopData() {
+    if (!this.pool) return;
+    try {
+      await this._q('UPDATE stats SET coins = 0, unlocked_skins = \'0,1,2,3\', daily_claimed_at = 0');
+    } catch {}
   }
 }

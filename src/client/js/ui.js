@@ -17,6 +17,7 @@ export class Ui {
     this.menuBtn = document.getElementById('menuBtn');
     this.deathScore = document.getElementById('deathScore');
     this.deathRank = document.getElementById('deathRank');
+    this.spectateBtn = document.getElementById('spectateBtn');
     this.boostBtn = document.getElementById('boostBtn');
 
     // Skins menu
@@ -83,12 +84,33 @@ export class Ui {
       }
       sw.title = skin.name;
       sw.dataset.idx = i;
+
+      // Lock overlay for non-free skins
+      if (i > 3) {
+        sw.classList.add('locked-skin');
+        const lock = document.createElement('div');
+        lock.className = 'skin-lock';
+        lock.innerHTML = '&#128274;';
+        sw.appendChild(lock);
+      }
+
       sw.addEventListener('click', () => this._selectSkin(i));
       this.skinPickerFull.appendChild(sw);
     });
   }
 
+  setUnlockedSkins(unlockedSet) {
+    this._unlockedSkins = unlockedSet;
+    this.skinPickerFull.querySelectorAll('.skin-swatch-full').forEach(el => {
+      const idx = parseInt(el.dataset.idx);
+      const locked = unlockedSet && !unlockedSet.has(idx);
+      el.classList.toggle('skin-locked', locked);
+    });
+  }
+
   _selectSkin(i) {
+    // Prevent selecting locked skins
+    if (this._unlockedSkins && !this._unlockedSkins.has(i) && i > 3) return;
     this.selectedSkin = i;
     this.skinPickerFull.querySelectorAll('.skin-swatch-full').forEach((el) => {
       el.classList.toggle('selected', Number(el.dataset.idx) === i);

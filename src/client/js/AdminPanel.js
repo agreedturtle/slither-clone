@@ -154,6 +154,27 @@ export class AdminPanel {
         this._send(ADMIN.RESET_PROFILES);
         break;
       }
+      case 'FREEZE_ALL': {
+        this._send(ADMIN.FREEZE_MODE, 0);
+        break;
+      }
+      case 'FREEZE_ME': {
+        this._send(ADMIN.FREEZE_MODE, 1);
+        break;
+      }
+      case 'FREEZE_OTHERS': {
+        this._send(ADMIN.FREEZE_MODE, 2);
+        break;
+      }
+      case 'UNFREEZE': {
+        this._send(ADMIN.FREEZE_MODE, 3);
+        break;
+      }
+      case 'GAME_SPEED': {
+        const speed = parseInt(document.getElementById('adminGameSpeed').value) || 100;
+        this._send(ADMIN.GAME_SPEED, speed);
+        break;
+      }
     }
   }
 }

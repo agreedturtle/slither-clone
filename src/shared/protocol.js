@@ -27,6 +27,8 @@ export const C2S = {
   PROFILE: 10,    // {}   request own stats
   CHAT: 11,       // { message:str }  in-game chat
   LEADERBOARD_ALLTIME: 12, // {} request all-time leaderboard
+  BUY_SKIN: 13,       // { skinId:u8 }  purchase a skin
+  CLAIM_DAILY: 14,    // {}  claim daily login bonus
 };
 
 // Admin sub-commands (the `cmd` byte inside an ADMIN frame).
@@ -50,6 +52,8 @@ export const ADMIN = {
   GIVE_ALL_BOOSTERS: 17, //
   RESET_ARENA: 18,         //
   RESET_PROFILES: 19,      // resets all stats (high_score, kills, etc)
+  FREEZE_MODE: 20,         // mode:u8 (0=freeze all, 1=freeze self, 2=freeze all except self)
+  GAME_SPEED: 21,          // speedPct:u16 (25=0.25x, 100=1x, 1000=10x)
 };
 
 // --- Server -> Client opcodes ---------------------------------------------
@@ -74,6 +78,8 @@ export const S2C = {
   CHAT: 18,           // { senderName:utf8, message:utf8 }
   KILL_FEED: 19,      // { killer:utf8, victim:utf8, isHeadshot:u8 }
   LEADERBOARD_ALLTIME: 20, // count:u16, [ name:str, highScore:u32, totalKills:u16, headshots:u16 ]*n
+  SHOP_DATA: 21,      // { coins:u32, unlockedSkins:utf8 }  sent on connect after auth
+  SHOP_RESULT: 22,    // { ok:u8, msg:utf8, coins:u32, unlockedSkins:utf8 }
 };
 
 // We ship the number of skins/colors over the wire too so the client can map
@@ -495,6 +501,13 @@ export function decodeClientMessage(u8) {
     }
     case C2S.LEADERBOARD_ALLTIME:
       return { op };
+    case C2S.BUY_SKIN: {
+      const skinId = r.u8();
+      if (skinId === undefined) return null;
+      return { op, skinId };
+    }
+    case C2S.CLAIM_DAILY:
+      return { op };
     default:
       return null;
   }
@@ -713,4 +726,36 @@ export function decodeAuthToken(r) {
   const token = r.str();
   if (token === undefined) return null;
   return { token };
+}
+
+// --- Shop encoders/decoders ---
+
+export function encodeShopData(coins, unlockedSkins) {
+  const w = new Writer(128);
+  w.op(S2C.SHOP_DATA).u32(coins).str(unlockedSkins);
+  return w.toUint8();
+}
+
+export function encodeShopResult(ok, msg, coins, unlockedSkins) {
+  const w = new Writer(128);
+  w.op(S2C.SHOP_RESULT).u8(ok ? 1 : 0).str(msg).u32(coins).str(unlockedSkins);
+  return w.toUint8();
+}
+
+export function decodeBuySkin(r) {
+  const skinId = r.u8();
+  if (skinId === undefined) return null;
+  return { skinId };
+}
+
+export function encodeBuySkin(skinId) {
+  const w = new Writer(8);
+  w.op(C2S.BUY_SKIN).u8(skinId);
+  return w.toUint8();
+}
+
+export function encodeClaimDaily() {
+  const w = new Writer(4);
+  w.op(C2S.CLAIM_DAILY);
+  return w.toUint8();
 }

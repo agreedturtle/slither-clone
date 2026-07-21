@@ -49,6 +49,8 @@ export class Game {
     this._deathRank = 0;
     this._deathScreenShown = false;
     this._deathAlpha = 0;      // 0..0.7 fade overlay
+    this._spectating = false;  // true when spectating another player
+    this._spectateId = 0;      // snake id to follow while spectating
 
     this._eatParticles = [];   // { x, y, tx, ty, colorIdx, born, dur }
 
@@ -82,6 +84,8 @@ export class Game {
     this._deathPos = null;
     this._deathScreenShown = false;
     this._deathAlpha = 0;
+    this._spectating = false;
+    this._spectateId = 0;
     this.ui.hideMenu();
     this.ui.hideDeath();
     this.ui.showHud();
@@ -227,7 +231,34 @@ export class Game {
   respawn() {
     // Optimistically clear my snake so the renderer waits for fresh data.
     this.state.snakes.delete(this.state.myId);
+    this._spectating = false;
+    this._spectateId = 0;
     this.net.respawn();
+  }
+
+  // ---- Spectator mode ----
+  startSpectating(snakeId) {
+    if (!this.state.alive) {
+      this._spectating = true;
+      // Auto-pick top snake if id is 0
+      if (!snakeId) {
+        let topScore = -1;
+        for (const [id, s] of this.state.snakes) {
+          if (s.score > topScore && id !== this.state.myId) {
+            topScore = s.score;
+            this._spectateId = id;
+          }
+        }
+      } else {
+        this._spectateId = snakeId;
+      }
+      this.ui.hideDeath();
+    }
+  }
+
+  stopSpectating() {
+    this._spectating = false;
+    this._spectateId = 0;
   }
 
   // ---- Main loop ----
@@ -266,10 +297,20 @@ export class Game {
       }
     }
 
-    // 3) Camera follows MY smoothed head (or freezes at death position).
+    // 3) Camera follows MY smoothed head (or frozen at death / spectating target).
     this.camera.setDt(dt);
     const meNow = this.state.snakes.get(this.state.myId);
-    if (!this.state.alive && this._deathPos) {
+    if (this._spectating && this._spectateId) {
+      // Spectating: follow the target snake
+      const target = this.state.snakes.get(this._spectateId);
+      if (target && target.renderPts && target.renderPts.length >= 2) {
+        this.camera.follow(target.renderPts[0], target.renderPts[1]);
+        let zoom = zoomFromScore(target.score);
+        if (target.zoomTicks > 0) zoom *= 0.5;
+        this.camera.setZoom(zoom);
+        this.hud.setScore(target.score);
+      }
+    } else if (!this.state.alive && this._deathPos) {
       // Dead — camera stays at death spot, slowly zooms out.
       this.camera.follow(this._deathPos.x, this._deathPos.y);
       const elapsed = performance.now() - this._deathTime;
@@ -310,7 +351,10 @@ export class Game {
     this.renderer.draw(this.state, this.camera, this._deathAlpha, this._eatParticles);
     this.hud.setCameraView(this.camera.viewBounds());
     this.hud.drawMinimap(this.state.radar, this.state.myId);
-    this.hud.drawMultiplier(this.state.multiplier, this.state.boosters, this.state.magnetTicks, this.state.speedTicks, this.state.zoomTicks);
+    this.hud.drawMultiplier(this.state.multiplier, this._spectating ? 0 : this.state.boosters, this.state.magnetTicks, this.state.speedTicks, this.state.zoomTicks);
+    // Toggle leaderboard spectating mode
+    const lbEl = document.getElementById('leaderboard');
+    if (lbEl) lbEl.classList.toggle('spectating', this._spectating);
 
     requestAnimationFrame((t) => this._loop(t));
   }

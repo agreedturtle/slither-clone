@@ -66,6 +66,9 @@ export class Room {
     this._tickFoodAdd = [];       // per-tick food deltas (drained once, sent to all)
     this._tickFoodRemove = [];
     this._tickRemoves = [];
+    this._frozen = new Set();      // frozen snake ids (admin freeze mode)
+    this._tickInterval = null;     // current setInterval handle (for dynamic speed)
+    this._tickHz = CONFIG.TICK_HZ;
 
     this.food.seed();
     this._maintainPopulation();
@@ -202,8 +205,10 @@ export class Room {
   // ---- Simulation ----------------------------------------------------------
 
   _startTicking() {
-    this._interval = setInterval(() => this._tick(), CONFIG.TICK_MS);
-    if (this._interval.unref) this._interval.unref();
+    if (this._tickInterval) clearInterval(this._tickInterval);
+    this._tickMs = 1000 / this._tickHz;
+    this._tickInterval = setInterval(() => this._tick(), this._tickMs);
+    if (this._tickInterval.unref) this._tickInterval.unref();
   }
 
   _tick() {
@@ -219,10 +224,10 @@ export class Room {
       }
       this._wasLagging = lagging;
 
-      // 1) Bots think (sets target angle / boost) — skipped during lag.
+      // 1) Bots think (sets target angle / boost) — skipped during lag or if frozen.
       if (!lagging) {
         for (const b of this.bots) {
-          if (b.snake && !b.snake.dead && (this.tick % b.thinkEvery === 0)) {
+          if (b.snake && !b.snake.dead && !this._frozen.has(b.snake.id) && (this.tick % b.thinkEvery === 0)) {
             b.think();
           }
         }
@@ -230,9 +235,10 @@ export class Room {
 
       // 2) Advance all snakes — always runs (snakes keep moving in last direction).
       //    But during lag, dead snakes don't tick (freeze in place).
-      //    During lag, big snakes slowly lose mass (the server is "crashing").
+      //    Frozen snakes also don't tick.
       for (const s of this.snakes.values()) {
         if (lagging && s.dead) continue;
+        if (this._frozen.has(s.id)) continue;
         s.tick(this);
         // Lag drain: big snakes lose mass during the glitch
         if (lagging && !s.dead && s.score > 100000000) {
@@ -262,6 +268,15 @@ export class Room {
         if (this.tick % 10 === 0) this.food.sweepExpired();
         if (this.tick % CONFIG.POWERUP_SPAWN_INTERVAL === 0) this.food.spawnPowerup();
         if (this.tick % 10 === 0) this.food.sweepPowerups();
+        // Survival coins: 1 coin per 30s alive
+        if (this.tick % 600 === 0 && this.db) {
+          for (const s of this.snakes.values()) {
+            if (!s.dead && s.playerRef && s.playerRef.username) {
+              this.db.addCoins(s.playerRef.username, 1);
+              if (s.playerRef.stats) s.playerRef.stats.coins = (s.playerRef.stats.coins || 0) + 1;
+            }
+          }
+        }
       }
 
       // 7) Broadcast (per-client culled).
@@ -346,6 +361,7 @@ export class Room {
     const MAGNET_RANGE = 120; // extra pickup range when magnet is active
     for (const s of this.snakes.values()) {
       if (s.dead) continue;
+      if (this._frozen.has(s.id)) continue;
       const magnetBonus = s.hasMagnet ? MAGNET_RANGE : 0;
       const r = (s.bodyRadius + CONFIG.FOOD_RADIUS_DEATH + DEATH_EAT_EXTRA + 2) * 2.5 + magnetBonus;
       this._foodGrid.queryCircle(s.headX, s.headY, r, (pellet) => {
@@ -357,6 +373,11 @@ export class Room {
           if (eaten) {
             const value = s.effectiveMultiplier > 1 ? eaten.value * s.effectiveMultiplier : eaten.value;
             s.addScore(value);
+            // Earn 1 coin per food eaten (logged-in players only)
+            if (s.playerRef && s.playerRef.username && this.db) {
+              this.db.addCoins(s.playerRef.username, 1);
+              if (s.playerRef.stats) s.playerRef.stats.coins = (s.playerRef.stats.coins || 0) + 1;
+            }
           }
         }
         return false;
@@ -391,6 +412,7 @@ export class Room {
     const deaths = [];
     for (const s of this.snakes.values()) {
       if (s.dead) continue;
+      if (this._frozen.has(s.id)) continue;
       if (s.invuln > 0) continue; // spawn protection
       if (this.godMode && s.playerRef) continue; // admin god mode
 
@@ -515,6 +537,9 @@ export class Room {
     const killerIsHeadshot = killer && headDist < (killer.bodyRadius + snake.bodyRadius);
     if (this.db && killer && killer.playerRef && killer.playerRef.username) {
       this.db.recordKill(killer.playerRef.username, killerIsHeadshot);
+      // Earn 10 coins per kill
+      this.db.addCoins(killer.playerRef.username, 10);
+      if (killer.playerRef.stats) killer.playerRef.stats.coins = (killer.playerRef.stats.coins || 0) + 10;
     }
 
     // Remove from world.
@@ -734,6 +759,8 @@ export class Room {
     // Track game started
     if (this.db && player.username) {
       this.db.recordGame(player.username);
+      this.db.addCoins(player.username, 5);
+      if (player.stats) player.stats.coins = (player.stats.coins || 0) + 5;
     }
   }
 
@@ -981,6 +1008,46 @@ export class Room {
         this.db.resetAllStats().then(result => {
           player.send(encodeAdminAck(result.ok, result.msg));
         });
+        break;
+      }
+      case ADMIN.FREEZE_MODE: {
+        const mode = arg1 || 0; // 0=freeze all, 1=freeze self, 2=freeze all except self
+        this._frozen.clear();
+        let count = 0;
+        if (mode === 0) {
+          // Freeze ALL snakes
+          for (const s of this.snakes.values()) {
+            if (!s.dead) { this._frozen.add(s.id); count++; }
+          }
+          player.send(encodeAdminAck(true, `Frozen ALL ${count} snakes`));
+        } else if (mode === 1) {
+          // Freeze SELF only
+          if (player.snake && !player.snake.dead) {
+            this._frozen.add(player.snake.id);
+            count = 1;
+          }
+          player.send(encodeAdminAck(true, `Frozen self (${count ? 'active' : 'not alive'})`));
+        } else if (mode === 2) {
+          // Freeze ALL EXCEPT self
+          const myId = player.snake ? player.snake.id : -1;
+          for (const s of this.snakes.values()) {
+            if (!s.dead && s.id !== myId) { this._frozen.add(s.id); count++; }
+          }
+          player.send(encodeAdminAck(true, `Frozen ${count} snakes (you are free)`));
+        } else if (mode === 3) {
+          // UNFREEZE all
+          this._frozen.clear();
+          player.send(encodeAdminAck(true, 'Unfrozen all snakes'));
+        }
+        break;
+      }
+      case ADMIN.GAME_SPEED: {
+        const pct = Math.max(25, Math.min(1000, arg1 || 100));
+        this._tickHz = Math.round(CONFIG.TICK_HZ * pct / 100);
+        this._tickHz = Math.max(5, Math.min(200, this._tickHz));
+        this._startTicking();
+        const speedX = (pct / 100).toFixed(2);
+        player.send(encodeAdminAck(true, `Game speed: ${speedX}x (${this._tickHz} Hz)`));
         break;
       }
       default:

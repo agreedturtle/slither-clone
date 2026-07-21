@@ -75,8 +75,7 @@ export const CONFIG = {
 // --- Derived helpers (shared math so client & server agree) -----------------
 
 export function scoreToPoints(score) {
-  const p = CONFIG.MIN_POINTS + Math.floor(score / CONFIG.SCORE_PER_POINT);
-  return Math.min(Math.max(CONFIG.MIN_POINTS, p), 4000);
+  return CONFIG.MIN_POINTS + Math.floor(score / CONFIG.SCORE_PER_POINT);
 }
 
 export function pointsToScore(points) {
@@ -88,8 +87,13 @@ export function bodyRadiusFromScore(score) {
   return Math.max(CONFIG.BODY_RADIUS_MIN, Math.min(t, CONFIG.BODY_RADIUS_MAX));
 }
 
+export function turnSpeedForScore(score) {
+  // Bigger snakes turn slower. At ~3M score, turn is ~60% of base. At 10M+, ~25%.
+  return CONFIG.TURN_SPEED * Math.max(0.22, 1 - score / 5000000);
+}
+
 export function zoomFromScore(score) {
-  return Math.max(0.8, 1.45 - score / 6000);
+  return Math.max(0.15, 1.0 - score / 235000000);
 }
 
 export default CONFIG;

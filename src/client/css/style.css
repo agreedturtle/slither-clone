@@ -118,6 +118,15 @@ html, body {
   background: linear-gradient(135deg, rgba(248,113,113,0.22), rgba(248,113,113,0.12)) !important;
   border-color: rgba(248,113,113,0.45) !important;
 }
+.death-btn-spectate {
+  background: linear-gradient(135deg, rgba(34,211,238,0.12), rgba(34,211,238,0.06)) !important;
+  border-color: rgba(34,211,238,0.25) !important;
+  color: var(--cyan) !important;
+}
+.death-btn-spectate:hover {
+  background: linear-gradient(135deg, rgba(34,211,238,0.22), rgba(34,211,238,0.12)) !important;
+  border-color: rgba(34,211,238,0.45) !important;
+}
 .banner {
   top: 18px;
   left: 50%;
@@ -220,8 +229,22 @@ html, body {
 }
 .skin-swatch-full.selected {
   border-color: #fff;
-  box-shadow: 0 0 16px rgba(255,255,255,0.5);
-  transform: scale(1.08);
+  box-shadow: 0 0 14px rgba(255,255,255,0.35);
+}
+.skin-swatch-full.locked-skin {
+  position: relative;
+}
+.skin-swatch-full.skin-locked {
+  opacity: 0.35;
+  filter: grayscale(0.7);
+}
+.skin-lock {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  font-size: 12px;
+  opacity: 0.8;
+  pointer-events: none;
 }
 #skinPreview {
   display: block;
@@ -344,6 +367,10 @@ html, body {
   width: 200px;
   text-align: left;
   backdrop-filter: blur(var(--blur));
+}
+#leaderboard.spectating {
+  pointer-events: auto;
+  cursor: pointer;
 }
 #leaderboardList {
   list-style: none;
@@ -937,4 +964,187 @@ option {
 #menu .title {
   font-size: 44px;
   margin-bottom: 0;
+}
+
+/* =============================================
+   Shop
+   ============================================= */
+.shop-panel {
+  max-height: 85vh;
+  overflow-y: auto;
+  scrollbar-width: thin;
+}
+.shop-coins {
+  text-align: center;
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--gold);
+  margin: 8px 0;
+}
+.coin-icon {
+  color: var(--gold);
+  font-size: 0.9em;
+}
+.daily-btn {
+  width: 100%;
+  margin-bottom: 12px;
+  font-size: 14px !important;
+}
+.daily-btn.claimed {
+  opacity: 0.4;
+  pointer-events: none;
+}
+.shop-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin: 12px 0;
+}
+.shop-item {
+  position: relative;
+  aspect-ratio: 1;
+  border-radius: var(--radius-sm);
+  border: 2px solid var(--border);
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: rgba(12, 18, 30, 0.6);
+  transition: border-color 0.15s, transform 0.1s;
+  overflow: hidden;
+}
+.shop-item:hover {
+  border-color: rgba(255, 255, 255, 0.2);
+  transform: scale(1.04);
+}
+.shop-item.owned {
+  border-color: var(--green);
+}
+.shop-item.owned::after {
+  content: '\2713';
+  position: absolute;
+  top: 4px;
+  right: 6px;
+  font-size: 14px;
+  color: var(--green);
+  font-weight: 700;
+}
+.shop-item.locked {
+  opacity: 0.5;
+}
+.shop-item.selected {
+  border-color: var(--gold);
+  box-shadow: 0 0 12px rgba(251, 191, 36, 0.3);
+}
+.shop-swatch {
+  width: 70%;
+  height: 55%;
+  border-radius: 4px;
+  margin-bottom: 4px;
+}
+.shop-item-name {
+  font-size: 9px;
+  color: var(--text-dim);
+  text-align: center;
+  line-height: 1.1;
+}
+.shop-item-price {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--gold);
+}
+.shop-item-tier {
+  font-size: 8px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+.shop-item.free .shop-item-price {
+  color: var(--green);
+}
+/* Buy overlay on locked items */
+.shop-buy-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.7);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity 0.15s;
+  border-radius: var(--radius-sm);
+}
+.shop-item:hover .shop-buy-overlay,
+.shop-item.locked .shop-buy-overlay {
+  opacity: 1;
+}
+.shop-item.owned .shop-buy-overlay {
+  display: none;
+}
+.btn.buy-btn {
+  padding: 4px 10px;
+  font-size: 11px;
+  width: auto;
+  min-width: 60px;
+}
+/* =============================================
+   Coin box in HUD
+   ============================================= */
+#coinBox {
+  color: var(--gold);
+  font-weight: 700;
+}
+#coinBox .coin-icon {
+  font-size: 11px;
+}
+
+/* =============================================
+   Mobile touch controls
+   ============================================= */
+.touch-zone {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 40vh;
+  z-index: 5;
+  pointer-events: auto;
+}
+.touch-boost {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  background: rgba(110, 232, 74, 0.25);
+  border: 2px solid var(--green);
+  color: var(--green);
+  font-size: 12px;
+  font-weight: 700;
+  z-index: 6;
+  pointer-events: auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+.touch-boost:active {
+  background: rgba(110, 232, 74, 0.5);
+}
+@media (pointer: fine) {
+  .touch-zone, .touch-boost { display: none !important; }
+}
+/* =============================================
+   Gold button variant
+   ============================================= */
+.btn.gold {
+  background: linear-gradient(135deg, #b8860b 0%, #daa520 50%, #b8860b 100%);
+  color: #fff;
+}
+.btn.gold:hover {
+  filter: brightness(1.15);
 }

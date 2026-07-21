@@ -32,6 +32,42 @@ export const SKINS = [
     colors: ['#FF00FF', '#00FFFF', '#00FF88', '#FFFF00', '#FF00FF', '#00FFFF', '#00FF88'] },
 ];
 
+// Skin prices in coins. 0 = free (unlocked by default).
+export const SKIN_PRICES = [
+  0,      // 0 Red
+  0,      // 1 Blue
+  0,      // 2 Green
+  0,      // 3 Yellow
+  500,    // 4 Orange
+  500,    // 5 Light Blue
+  2500,   // 6 Sunset
+  2500,   // 7 Ocean
+  1000,   // 8 Sandy
+  1000,   // 9 Frost
+  2500,   // 10 Crimson
+  5000,   // 11 Royal
+  5000,   // 12 Dark Green
+  5000,   // 13 Lavender
+  10000,  // 14 Rainbow
+  25000,  // 15 Neon
+];
+
+export const SKIN_TIERS = [
+  { name: 'Common',    color: '#aaaaaa', min: 0 },
+  { name: 'Uncommon',  color: '#6ee84a', min: 500 },
+  { name: 'Rare',      color: '#3388FF', min: 1000 },
+  { name: 'Epic',      color: '#bb44ff', min: 2500 },
+  { name: 'Legendary', color: '#ff8800', min: 5000 },
+  { name: 'Mythic',    color: '#ff2266', min: 10000 },
+];
+
+export function skinTier(price) {
+  for (let i = SKIN_TIERS.length - 1; i >= 0; i--) {
+    if (price >= SKIN_TIERS[i].min) return SKIN_TIERS[i];
+  }
+  return SKIN_TIERS[0];
+}
+
 export const RAINBOW_STOPS = [
   '#ff5252', '#ff9a1f', '#ffd24d', '#7CFC4D',
   '#2CE0B0', '#19E0FF', '#5CB8FF', '#9D6BFF', '#FF3DC4',

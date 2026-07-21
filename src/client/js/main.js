@@ -11,6 +11,7 @@ import Hud from './Hud.js';
 import Ui from './ui.js';
 import AdminPanel from './AdminPanel.js';
 import KillFeed from './KillFeed.js';
+import { Shop } from './Shop.js';
 
 const canvas = document.getElementById('game');
 
@@ -24,6 +25,7 @@ const adminPanel = new AdminPanel(net);
 const killFeed = new KillFeed();
 
 const game = new Game({ net, renderer, camera, input, hud, ui });
+const shop = new Shop(net);
 
 // ---- Auth state ----
 let authState = { token: null, username: null };
@@ -127,9 +129,15 @@ ui.playBtn.addEventListener('click', () => {
   game.join(ui.getName(), ui.getSkin());
 });
 ui.respawnBtn.addEventListener('click', () => {
+  game.stopSpectating();
   game.respawn();
 });
+ui.spectateBtn.addEventListener('click', () => {
+  // Spectate the top snake on the leaderboard
+  game.startSpectating(0); // 0 = auto-pick top snake
+});
 ui.menuBtn.addEventListener('click', () => {
+  game.stopSpectating();
   ui.hideDeath();
   ui.hideHud();
   ui.showMenu();
@@ -140,6 +148,16 @@ ui.skinsBtn.addEventListener('click', () => {
 });
 ui.skinsBackBtn.addEventListener('click', () => {
   ui.hideSkins();
+  ui.showMenu();
+});
+
+// ---- Shop ----
+document.getElementById('shopBtn').addEventListener('click', () => {
+  ui.hideMenu();
+  shop.show();
+});
+shop.backBtn.addEventListener('click', () => {
+  shop.hide();
   ui.showMenu();
 });
 
@@ -185,7 +203,10 @@ if (ui.boostBtn) {
 window.addEventListener('keydown', (e) => {
   // Enter: play from menu or respawn from death.
   if (e.code === 'Enter') {
-    if (hud && !hud.el.classList.contains('hidden') && !ui.death.classList.contains('hidden')) {
+    if (game._spectating) {
+      game.stopSpectating();
+      game.respawn();
+    } else if (hud && !hud.el.classList.contains('hidden') && !ui.death.classList.contains('hidden')) {
       // dead — respawn
       game.respawn();
     } else if (!ui.menu.classList.contains('hidden') && net.connected) {
@@ -193,6 +214,15 @@ window.addEventListener('keydown', (e) => {
     } else if (!ui.death.classList.contains('hidden')) {
       game.respawn();
     }
+  }
+  // S: spectate from death screen
+  if (e.code === 'KeyS' && !ui.death.classList.contains('hidden')) {
+    game.startSpectating(0);
+  }
+  // Escape: stop spectating and respawn
+  if (e.code === 'Escape' && game._spectating) {
+    game.stopSpectating();
+    game.respawn();
   }
   // G: toggle low graphics.
   if (e.code === 'KeyG') {
@@ -213,3 +243,89 @@ net.on('welcome', () => { ui.hideConnecting(); });
 
 ui.showConnecting('Connecting to server…');
 game.start();
+
+// ---- Speed slider label update ----
+const speedSlider = document.getElementById('adminGameSpeed');
+const speedLabel = document.getElementById('adminSpeedLabel');
+if (speedSlider && speedLabel) {
+  speedSlider.addEventListener('input', () => {
+    const v = parseInt(speedSlider.value) || 100;
+    speedLabel.textContent = (v / 100).toFixed(2) + 'x';
+  });
+}
+
+// ---- Leaderboard click-to-spectate ----
+const lbList = document.getElementById('leaderboardList');
+if (lbList) {
+  lbList.addEventListener('click', (e) => {
+    if (!game._spectating) return;
+    const li = e.target.closest('li');
+    if (!li) return;
+    // Find snake by matching rank text and score
+    const rankEl = li.querySelector('.rank');
+    if (!rankEl) return;
+    const rank = parseInt(rankEl.textContent);
+    // Find snake from radar that matches this leaderboard position
+    const radar = game.state.radar;
+    if (!radar || radar.length === 0) return;
+    // Sort radar by score to match leaderboard order
+    const sorted = [...radar].sort((a, b) => b.score - a.score);
+    if (rank > 0 && rank <= sorted.length) {
+      game.startSpectating(sorted[rank - 1].id);
+    }
+  });
+}
+
+// ---- Mobile touch steering ----
+const isTouchDevice = ('ontouchstart' in window) || navigator.maxTouchPoints > 0;
+if (isTouchDevice) {
+  const touchZone = document.getElementById('touchZone');
+  const boostBtn = document.getElementById('boostBtn');
+  if (touchZone) touchZone.classList.remove('hidden');
+  if (boostBtn) boostBtn.classList.remove('hidden');
+
+  let touchId = null;
+  let touchStartX = 0;
+  let touchStartY = 0;
+
+  const getAngle = (touch) => {
+    const rect = canvas.getBoundingClientRect();
+    const cx = rect.width / 2;
+    const cy = rect.height / 2;
+    const tx = touch.clientX - rect.left - cx;
+    const ty = touch.clientY - rect.top - cy;
+    return Math.atan2(ty, tx);
+  };
+
+  document.addEventListener('touchstart', (e) => {
+    if (shop.isVisible()) return;
+    if (!ui.menu.classList.contains('hidden')) return;
+    if (!ui.death.classList.contains('hidden')) return;
+    // Only capture the first touch
+    if (touchId !== null) return;
+    const t = e.changedTouches[0];
+    touchId = t.identifier;
+    touchStartX = t.clientX;
+    touchStartY = t.clientY;
+    input.setTouchAngle(getAngle(t));
+  }, { passive: true });
+
+  document.addEventListener('touchmove', (e) => {
+    if (touchId === null) return;
+    for (const t of e.changedTouches) {
+      if (t.identifier === touchId) {
+        input.setTouchAngle(getAngle(t));
+        break;
+      }
+    }
+  }, { passive: true });
+
+  document.addEventListener('touchend', (e) => {
+    for (const t of e.changedTouches) {
+      if (t.identifier === touchId) {
+        touchId = null;
+        break;
+      }
+    }
+  }, { passive: true });
+}

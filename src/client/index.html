@@ -24,6 +24,7 @@
 
       <div class="menu-buttons">
         <button id="playBtn" class="btn primary">Play</button>
+        <button id="shopBtn" class="btn gold">Shop</button>
         <button id="skinsBtn" class="btn">Skins</button>
         <button id="loginBtn" class="btn accent">Login</button>
         <button id="profileBtn" class="btn accent hidden">Profile</button>
@@ -132,6 +133,17 @@
     </div>
   </div>
 
+  <!-- ===== Shop ===== -->
+  <div id="shopScreen" class="overlay center-overlay hidden">
+    <div class="panel shop-panel">
+      <h1 class="title">Shop</h1>
+      <div class="shop-coins"><span class="coin-icon">&#9679;</span> <span id="shopCoinCount">0</span></div>
+      <button id="dailyBtn" class="btn gold daily-btn">Claim Daily (50 coins)</button>
+      <div id="shopGrid" class="shop-grid"></div>
+      <button id="shopBackBtn" class="btn">Back</button>
+    </div>
+  </div>
+
   <!-- ===== Death screen ===== -->
   <div id="death" class="overlay center-overlay hidden">
     <div class="death-red-flash"></div>
@@ -143,9 +155,10 @@
       </div>
       <div class="death-buttons">
         <button id="respawnBtn" class="btn primary death-btn-yellow">Play Again</button>
+        <button id="spectateBtn" class="btn death-btn-spectate">Spectate</button>
         <button id="menuBtn" class="btn death-btn-menu">Main Menu</button>
       </div>
-      <div class="hint">press <b>Enter</b> to respawn</div>
+      <div class="hint">press <b>Enter</b> to respawn · <b>S</b> to spectate</div>
     </div>
   </div>
 
@@ -158,6 +171,7 @@
   <div id="hud" class="hidden">
     <div id="topLeft">
       <div id="scoreBox" class="hud-box"><span class="hud-label">Mass</span><span id="scoreVal">0</span></div>
+      <div id="coinBox" class="hud-box small"><span class="coin-icon">&#9679;</span> <span id="coinVal">0</span></div>
       <div id="fpsBox" class="hud-box small"><span id="fpsVal">60</span> fps · <span id="pingVal">—</span> ms</div>
     </div>
     <div id="leaderboard" class="hud-box">
@@ -167,6 +181,7 @@
     <canvas id="minimap"></canvas>
     <div id="boostVignette" class="hidden"></div>
     <button id="boostBtn" class="touch-boost hidden">BOOST</button>
+    <div id="touchZone" class="touch-zone hidden"></div>
   </div>
 
   <!-- ===== Admin Panel (F2) ===== -->
@@ -249,6 +264,25 @@
         </div>
         <div class="admin-row">
           <button class="admin-btn danger" data-cmd="RESET_PROFILES">Reset Profiles</button>
+        </div>
+      </div>
+      <div class="admin-section">
+        <span class="admin-section-title">Freeze</span>
+        <div class="admin-row">
+          <button class="admin-btn danger" data-cmd="FREEZE_ALL">Freeze ALL</button>
+          <button class="admin-btn" data-cmd="FREEZE_ME">Freeze Me</button>
+        </div>
+        <div class="admin-row">
+          <button class="admin-btn" data-cmd="FREEZE_OTHERS">Freeze Others</button>
+          <button class="admin-btn accent" data-cmd="UNFREEZE">Unfreeze All</button>
+        </div>
+      </div>
+      <div class="admin-section">
+        <span class="admin-section-title">Game Speed</span>
+        <div class="admin-row">
+          <input id="adminGameSpeed" type="range" min="25" max="1000" step="25" value="100" style="flex:1" />
+          <span id="adminSpeedLabel" style="min-width:50px;text-align:center;font-weight:700;color:#6ee84a;">1.00x</span>
+          <button class="admin-btn accent" data-cmd="GAME_SPEED">Set</button>
         </div>
       </div>
     </div>

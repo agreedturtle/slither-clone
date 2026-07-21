@@ -24,8 +24,8 @@ export default {
   // --- Body / growth -------------------------------------------------------
   POINT_DIST: 3.5,              // visual spacing between body points
   MIN_POINTS: 10,               // smallest snake body length
-  MAX_POINTS: 400000,            // hard cap on longest snake
-  SCORE_PER_POINT: 5,           // score needed per extra body point (higher = slower growth)
+  MAX_POINTS: 0,              // 0 = no cap, body grows forever with score
+  SCORE_PER_POINT: 3,           // score needed per extra body point (higher = slower growth)
   BODY_RADIUS_MIN: 8,           // thinnest the snake can be
   BODY_RADIUS_MAX: 1000,          // thickest the snake can be
 
@@ -56,7 +56,7 @@ export default {
 
   // --- Network / client ----------------------------------------------------
   VIEW_RADIUS: 1400,            // how far around the head we send/draw entities
-  MAX_BODY_POINTS_NET: 6000,    // hard cap on points transmitted per snake
+  MAX_BODY_POINTS_NET: 10000,   // hard cap on points transmitted per snake
 
   // --- Leaderboard ---------------------------------------------------------
   LEADERBOARD_SIZE: 10,         // top N shown on leaderboard

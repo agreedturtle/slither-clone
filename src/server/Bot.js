@@ -75,12 +75,15 @@ const BOT_NAMES = [
   'Tetris', 'Chess', 'Uno', 'Domino',
 ];
 
-// Personality types with weights: dumb(35%), medium(40%), smart(25%)
+// Personality types with weights: dumb(30%), medium(40%), smart(30%)
 const PERSONALITY_WEIGHTS = [
-  { type: 'dumb',  weight: 0.35 },
+  { type: 'dumb',  weight: 0.30 },
   { type: 'medium', weight: 0.40 },
-  { type: 'smart',  weight: 0.25 },
+  { type: 'smart',  weight: 0.30 },
 ];
+
+// Movement styles — each bot picks one, persists until respawn
+const MOVE_STYLES = ['roamer', 'edgeHugger', 'wanderer'];
 
 function pickPersonality() {
   const r = Math.random();
@@ -100,19 +103,21 @@ export class Bot {
     this.skin = opts.skin != null ? opts.skin : (Math.random() * 11) | 0;
     this._startMass = opts.mass;
     this.personality = opts.personality || pickPersonality();
+    this.moveStyle = MOVE_STYLES[(Math.random() * MOVE_STYLES.length) | 0];
 
-    // Dumb bots think less often (slower reactions). Smart bots think every tick.
     if (this.personality === 'dumb') {
-      this.thinkEvery = 2 + ((Math.random() * 2) | 0); // 2..3
+      this.thinkEvery = 2 + ((Math.random() * 2) | 0);
     } else if (this.personality === 'smart') {
-      this.thinkEvery = 1; // every tick
+      this.thinkEvery = 1;
     } else {
-      this.thinkEvery = 1 + ((Math.random() * 2) | 0); // 1..2
+      this.thinkEvery = 1 + ((Math.random() * 2) | 0);
     }
     this.tickCounter = 0;
-    this._wanderAngle = Math.random() * TAU; // for dumb wandering
-    this._huntTarget = null; // { headX, headY, score, id } for smart bots
+    this._wanderAngle = Math.random() * TAU;
+    this._wanderTimer = 0;
+    this._huntTarget = null;
     this._huntTimer = 0;
+    this._dodgeCooldown = 0;
 
     this.spawn();
   }
@@ -129,7 +134,7 @@ export class Bot {
       y: pos.y,
       angle,
     });
-    const startScore = this._startMass != null ? this._startMass : (Math.floor(Math.random() * 13) + 18); // 18-30
+    const startScore = this._startMass != null ? this._startMass : (Math.floor(Math.random() * 13) + 18);
     this._startMass = null;
     if (startScore > 0) this.snake.addScore(startScore);
     this.snake.botRef = this;
@@ -140,106 +145,198 @@ export class Bot {
 
   respawn() {
     this.skin = (Math.random() * 11) | 0;
+    this.moveStyle = MOVE_STYLES[(Math.random() * MOVE_STYLES.length) | 0];
     this.spawn();
   }
 
-  onDeath() { /* Room will call respawn after a short delay */ }
+  onDeath() { }
 
   // ---- Main AI tick ----
   think() {
     const s = this.snake;
     if (!s || s.dead) return;
     this.tickCounter++;
+    if (this._dodgeCooldown > 0) this._dodgeCooldown--;
+
     const hx = s.headX, hy = s.headY;
     const headR = s.bodyRadius;
     const myScore = s.score;
 
-    // 1) AVOID border — always priority.
+    // Bigger bots think faster
+    if (myScore >= 200) this.thinkEvery = 1;
+
     const distFromCenter = Math.sqrt(hx * hx + hy * hy);
+
+    // 1) AVOID border — always priority.
     const edgeMargin = CONFIG.WORLD_RADIUS - headR * 2 - 60;
     if (distFromCenter > edgeMargin) {
       const inward = Math.atan2(-hy, -hx);
       s.setTargetAngle(inward);
-      s.setBoost(false);
+      s.setBoost(distFromCenter > CONFIG.WORLD_RADIUS - headR - 20);
       return;
     }
 
-    // 2) AVOID bodies — always priority.
-    const lookAhead = this._scanAhead(s, headR);
-    if (lookAhead.danger) {
-      const left = wrapAngle(s.angle - 0.6);
-      const right = wrapAngle(s.angle + 0.6);
-      const leftSafe = this._angleOpen(s, left, headR);
-      const rightSafe = this._angleOpen(s, right, headR);
-      let chosen;
-      if (leftSafe && rightSafe) {
-        chosen = Math.abs(angleDiff(s.angle, left)) < Math.abs(angleDiff(s.angle, right)) ? left : right;
-      } else if (leftSafe) chosen = left;
-      else if (rightSafe) chosen = right;
-      else chosen = wrapAngle(s.angle + Math.PI);
-      s.setTargetAngle(chosen);
-      s.setBoost(false);
+    // 2) FLEE from threats — ALL bots do this, scaled by size
+    const threatRange = Math.min(600, 200 + myScore * 0.15);
+    const bestThreat = this._findClosestThreat(s, hx, hy, myScore, threatRange);
+    if (bestThreat) {
+      const fleeAngle = Math.atan2(hy - bestThreat.hy, hx - bestThreat.hx);
+      s.setTargetAngle(fleeAngle);
+      const d = Math.sqrt(bestThreat.d2);
+      // Bigger threats and closer threats = more urgency
+      const urgency = bestThreat.score / Math.max(1, myScore);
+      s.setBoost(d < 300 || (urgency > 0.8 && d < 500));
       return;
     }
 
-    // Personality-specific behavior below.
-    switch (this.personality) {
-      case 'dumb':  this._thinkDumb(s, hx, hy, headR, myScore); break;
-      case 'smart': this._thinkSmart(s, hx, hy, headR, myScore, distFromCenter); break;
-      default:      this._thinkMedium(s, hx, hy, headR, myScore, distFromCenter); break;
+    // 3) Dodge body collisions — scale with size
+    if (myScore >= 2000) {
+      if (this._eliteDodge(s, hx, hy, headR, myScore, distFromCenter)) return;
+    } else if (myScore >= 200) {
+      if (this._mediumDodge(s, hx, hy, headR, myScore)) return;
+    } else {
+      const lookAhead = this._scanAhead(s, headR);
+      if (lookAhead.danger) {
+        const left = wrapAngle(s.angle - 0.6);
+        const right = wrapAngle(s.angle + 0.6);
+        const leftSafe = this._angleOpen(s, left, headR);
+        const rightSafe = this._angleOpen(s, right, headR);
+        let chosen;
+        if (leftSafe && rightSafe) {
+          chosen = Math.abs(angleDiff(s.angle, left)) < Math.abs(angleDiff(s.angle, right)) ? left : right;
+        } else if (leftSafe) chosen = left;
+        else if (rightSafe) chosen = right;
+        else chosen = wrapAngle(s.angle + Math.PI);
+        s.setTargetAngle(chosen);
+        s.setBoost(false);
+        return;
+      }
+    }
+
+    // 4) Goal-oriented behavior based on size + personality
+    if (myScore >= 500) {
+      this._thinkBig(s, hx, hy, headR, myScore, distFromCenter);
+    } else if (myScore >= 50) {
+      this._thinkMedium(s, hx, hy, headR, myScore, distFromCenter);
+    } else {
+      this._thinkSmall(s, hx, hy, headR, myScore, distFromCenter);
     }
   }
 
-  // ---- DUMB bot: wanders randomly, eats food only if very close, rarely fights ----
-  _thinkDumb(s, hx, hy, headR, myScore) {
-    // Flee if something huge is right on top (panic).
-    const threat = this.room.findThreatTo(s);
-    if (threat && threat.dist2 < 120 * 120) {
-      const flee = Math.atan2(hy - threat.headY, hx - threat.headX);
-      s.setTargetAngle(flee);
-      s.setBoost(false);
-      return;
+  // ---- Find closest threat (any snake heading toward us or nearby) ----
+  _findClosestThreat(s, hx, hy, myScore, range) {
+    const range2 = range * range;
+    let best = null;
+    for (const o of this.room.snakes.values()) {
+      if (o.id === s.id || o.dead) continue;
+      const d2v = dist2(hx, hy, o.headX, o.headY);
+      if (d2v > range2) continue;
+      // Any snake close enough and big enough to be dangerous
+      if (o.score < myScore * 0.4) continue;
+      // If close (<200px), always threat. If farther, only if heading toward us.
+      if (d2v > 200 * 200) {
+        const dx = hx - o.headX, dy = hy - o.headY;
+        const facing = Math.cos(o.angle) * dx + Math.sin(o.angle) * dy;
+        if (facing < 0) continue;
+      }
+      if (!best || d2v < best.d2) best = { hx: o.headX, hy: o.headY, d2: d2v, score: o.score };
     }
-
-    // Eat only very close food.
-    const food = this.room.findNearestFood(hx, hy, 300);
-    if (food) {
-      s.setTargetAngle(Math.atan2(food.y - hy, food.x - hx));
-      s.setBoost(false);
-      return;
-    }
-
-    // Wander: slowly drift in a random direction, occasionally change.
-    if (this.tickCounter % 20 === 0 || !this._wanderAngle) {
-      this._wanderAngle = Math.random() * TAU;
-    }
-    // Drift toward center slightly so they don't hug the wall.
-    const toCenter = Math.atan2(-hy, -hx);
-    const blend = wrapAngle(this._wanderAngle * 0.7 + toCenter * 0.3);
-    s.setTargetAngle(blend);
-    s.setBoost(false);
+    return best;
   }
 
-  // ---- MEDIUM bot: eats food, avoids threats, mild aggression ----
-  _thinkMedium(s, hx, hy, headR, myScore, distFromCenter) {
-    // Flee from threats.
-    const threat = this.room.findThreatTo(s);
-    if (threat && threat.dist2 < 200 * 200) {
-      const flee = Math.atan2(hy - threat.headY, hx - threat.headX);
-      s.setTargetAngle(flee);
+  // ---- MEDIUM: Wider dodge for mid-sized bots (score 200+) ----
+  // Checks 5 angles, avoids bodies + border + nearby snake heads
+  _mediumDodge(s, hx, hy, headR, myScore) {
+    const scanDist = headR * 3 + 80;
+    const candidates = [-60, -30, 0, 30, 60];
+    let bestScore = -Infinity;
+    let bestAngle = s.angle;
+
+    for (const deg of candidates) {
+      const testAngle = wrapAngle(s.angle + deg * Math.PI / 180);
+      const px = hx + Math.cos(testAngle) * scanDist;
+      const py = hy + Math.sin(testAngle) * scanDist;
+
+      let score = 0;
+
+      // Border penalty
+      const dCenter = Math.sqrt(px * px + py * py);
+      if (dCenter > CONFIG.WORLD_RADIUS - headR * 2 - 30) {
+        score -= 500;
+      }
+
+      // Body collision penalty
+      if (this.room.pointHitsBody(px, py, headR * 0.8, s.id)) {
+        score -= 400;
+      }
+
+      // Close check
+      const closeX = hx + Math.cos(testAngle) * (headR * 2 + 20);
+      const closeY = hy + Math.sin(testAngle) * (headR * 2 + 20);
+      if (this.room.pointHitsBody(closeX, closeY, headR * 0.7, s.id)) {
+        score -= 600;
+      }
+
+      // Bonus for continuing straight
+      if (deg === 0) score += 15;
+
+      if (score > bestScore) {
+        bestScore = score;
+        bestAngle = testAngle;
+      }
+    }
+
+    const diff = Math.abs(angleDiff(s.angle, bestAngle));
+    if (diff > 0.05 && bestScore < -100) {
+      s.setTargetAngle(bestAngle);
       s.setBoost(false);
-      return;
+      return true;
+    }
+    return false;
+  }
+
+  // ---- ELITE: Multi-angle dodge for big snakes ----
+  _eliteDodge(s, hx, hy, headR, myScore, distFromCenter) {
+    const scanDist = headR * 3 + 120;
+    const candidates = [-90, -60, -30, 0, 30, 60, 90];
+    let bestScore = -Infinity;
+    let bestAngle = s.angle;
+
+    for (const deg of candidates) {
+      const testAngle = wrapAngle(s.angle + deg * Math.PI / 180);
+      const px = hx + Math.cos(testAngle) * scanDist;
+      const py = hy + Math.sin(testAngle) * scanDist;
+
+      let score = 0;
+
+      const dCenter = Math.sqrt(px * px + py * py);
+      if (dCenter > CONFIG.WORLD_RADIUS - headR * 2) score -= 500;
+
+      if (this.room.pointHitsBody(px, py, headR * 0.8, s.id)) score -= 400;
+
+      const closeX = hx + Math.cos(testAngle) * (headR * 2 + 30);
+      const closeY = hy + Math.sin(testAngle) * (headR * 2 + 30);
+      if (this.room.pointHitsBody(closeX, closeY, headR * 0.7, s.id)) score -= 600;
+
+      if (deg === 0) score += 15;
+
+      if (score > bestScore) {
+        bestScore = score;
+        bestAngle = testAngle;
+      }
     }
 
-    // If far from center, head back strongly.
-    if (distFromCenter > CONFIG.WORLD_RADIUS * 0.35) {
-      const toCenter = Math.atan2(-hy, -hx);
-      s.setTargetAngle(toCenter);
-      s.setBoost(distFromCenter > CONFIG.WORLD_RADIUS * 0.6);
-      return;
+    const diff = Math.abs(angleDiff(s.angle, bestAngle));
+    if (diff > 0.08 && bestScore < -100) {
+      s.setTargetAngle(bestAngle);
+      s.setBoost(false);
+      return true;
     }
+    return false;
+  }
 
-    // Near center — pick up nearby food, otherwise drift around center.
+  // ---- SMALL bot (<50 score) ----
+  _thinkSmall(s, hx, hy, headR, myScore, distFromCenter) {
     const food = this.room.findNearestFood(hx, hy, 350);
     if (food) {
       s.setTargetAngle(Math.atan2(food.y - hy, food.x - hx));
@@ -247,85 +344,149 @@ export class Bot {
       return;
     }
 
-    // Chill near center: small random drift, bias back toward (0,0).
+    // Wander: pick a direction, change it periodically
+    this._wanderTimer--;
+    if (this._wanderTimer <= 0) {
+      this._wanderAngle = Math.random() * TAU;
+      this._wanderTimer = 30 + (Math.random() * 60) | 0;
+    }
+    // Bias wander slightly away from center if near edge, toward open area otherwise
     const toCenter = Math.atan2(-hy, -hx);
-    const wander = s.angle + (Math.random() - 0.5) * 0.4;
-    s.setTargetAngle(wrapAngle(toCenter * 0.5 + wander * 0.5));
+    if (distFromCenter > CONFIG.WORLD_RADIUS * 0.6) {
+      s.setTargetAngle(wrapAngle(this._wanderAngle * 0.4 + (toCenter + Math.PI) * 0.6));
+    } else {
+      s.setTargetAngle(this._wanderAngle);
+    }
     s.setBoost(false);
   }
 
-  // ---- SMART bot: aggressive hunter, boosts to cut off, seeks center & powerups ----
-  _thinkSmart(s, hx, hy, headR, myScore, distFromCenter) {
-    // Flee from much bigger threats.
-    const threat = this.room.findThreatTo(s);
-    if (threat && threat.dist2 < 250 * 250) {
-      const flee = Math.atan2(hy - threat.headY, hx - threat.headX);
-      s.setTargetAngle(flee);
-      s.setBoost(true); // boost away from danger
-      return;
+  // ---- MEDIUM bot (50-500 score) ----
+  _thinkMedium(s, hx, hy, headR, myScore, distFromCenter) {
+    // Grab powerups if nearby
+    const powerup = this.room.findNearestPowerup(hx, hy, 500);
+    if (powerup) {
+      const pupAngle = Math.atan2(powerup.y - hy, powerup.x - hx);
+      if (this._angleOpen(s, pupAngle, headR)) {
+        s.setTargetAngle(pupAngle);
+        const pupDist = Math.sqrt(dist2(hx, hy, powerup.x, powerup.y));
+        s.setBoost(pupDist > 200);
+        return;
+      }
     }
 
-    // Hunt smaller snakes aggressively.
+    // Hunt smaller prey if we're big enough
     const prey = this.room.findPreyFor(s);
-    if (prey && myScore > 30) {
-      this._huntTarget = { headX: prey.headX, headY: prey.headY, score: prey.score, id: prey.id };
-      this._huntTimer = 60; // remember target for 3 seconds
-      // Predict prey trajectory for intercept.
-      const predictDist = Math.sqrt(prey.d2) * 0.4;
+    if (prey && myScore > prey.score * 1.2 && prey.dist2 < 600 * 600) {
+      const predictDist = Math.sqrt(prey.d2) * 0.3;
       const tx = prey.headX + Math.cos(prey.angle) * predictDist;
       const ty = prey.headY + Math.sin(prey.angle) * predictDist;
       s.setTargetAngle(Math.atan2(ty - hy, tx - hx));
-      // Boost aggressively to close distance.
       const close = Math.sqrt(prey.d2);
-      s.setBoost(close < 400 && myScore > prey.score * 1.1);
+      s.setBoost(close < 350);
       return;
     }
 
-    // Continue chasing remembered target if still close.
-    if (this._huntTimer > 0 && this._huntTarget) {
-      this._huntTimer--;
-      const dx = this._huntTarget.headX - hx;
-      const dy = this._huntTarget.headY - hy;
-      const d2 = dx * dx + dy * dy;
-      if (d2 < 500 * 500) {
-        s.setTargetAngle(Math.atan2(dy, dx));
-        s.setBoost(d2 < 300 * 300 && myScore > 40);
-        return;
-      }
-      this._huntTarget = null;
-    }
-
-    // Powerups — boost to grab them.
-    const powerup = this.room.findNearestPowerup(hx, hy, 700);
-    if (powerup) {
-      s.setTargetAngle(Math.atan2(powerup.y - hy, powerup.x - hx));
-      const pupDist = Math.sqrt(dist2(hx, hy, powerup.x, powerup.y));
-      s.setBoost(pupDist > 200);
-      return;
-    }
-
-    // Eat food — prefer dense clusters.
-    const food = this.room.findNearestFood(hx, hy, 800);
+    // Eat food
+    const food = this.room.findNearestFood(hx, hy, 500);
     if (food) {
       s.setTargetAngle(Math.atan2(food.y - hy, food.x - hx));
       s.setBoost(false);
       return;
     }
 
-    // Move toward center — smart bots prefer center of the map.
+    // Wander based on movement style
+    this._wanderTimer--;
+    if (this._wanderTimer <= 0) {
+      this._wanderAngle = Math.random() * TAU;
+      this._wanderTimer = 40 + (Math.random() * 80) | 0;
+    }
     const toCenter = Math.atan2(-hy, -hx);
-    if (distFromCenter > CONFIG.WORLD_RADIUS * 0.3) {
-      s.setTargetAngle(toCenter);
+    if (this.moveStyle === 'edgeHugger') {
+      // Move tangentially to center (circle around the map)
+      const tangent = Math.atan2(-hx, hy);
+      s.setTargetAngle(wrapAngle(tangent * 0.7 + this._wanderAngle * 0.3));
+    } else if (this.moveStyle === 'roamer') {
+      // Roam randomly, slight center bias only when far out
+      if (distFromCenter > CONFIG.WORLD_RADIUS * 0.7) {
+        s.setTargetAngle(wrapAngle(this._wanderAngle * 0.5 + toCenter * 0.5));
+      } else {
+        s.setTargetAngle(this._wanderAngle);
+      }
+    } else {
+      // wanderer: gentle drift
+      s.setTargetAngle(wrapAngle(s.angle + (Math.random() - 0.5) * 0.3));
+    }
+    s.setBoost(false);
+  }
+
+  // ---- BIG bot (500+ score) ----
+  _thinkBig(s, hx, hy, headR, myScore, distFromCenter) {
+    const cautious = myScore >= 3000;
+
+    // Grab powerups if nearby and safe
+    const powerup = this.room.findNearestPowerup(hx, hy, 500);
+    if (powerup && !cautious) {
+      const pupAngle = Math.atan2(powerup.y - hy, powerup.x - hx);
+      if (this._angleOpen(s, pupAngle, headR)) {
+        s.setTargetAngle(pupAngle);
+        const pupDist = Math.sqrt(dist2(hx, hy, powerup.x, powerup.y));
+        s.setBoost(pupDist > 200);
+        return;
+      }
+    }
+
+    // Hunt only if not cautious and prey is much smaller
+    if (!cautious) {
+      const prey = this.room.findPreyFor(s);
+      if (prey && myScore > prey.score * 1.5 && prey.dist2 < 500 * 500) {
+        const predictDist = Math.sqrt(prey.d2) * 0.35;
+        const tx = prey.headX + Math.cos(prey.angle) * predictDist;
+        const ty = prey.headY + Math.sin(prey.angle) * predictDist;
+        s.setTargetAngle(Math.atan2(ty - hy, tx - hx));
+        const close = Math.sqrt(prey.d2);
+        s.setBoost(close < 300);
+        return;
+      }
+    }
+
+    // Eat food — wider scan for big snakes
+    const foodRange = cautious ? 400 : 800;
+    const food = this.room.findNearestFood(hx, hy, foodRange);
+    if (food) {
+      const foodAngle = Math.atan2(food.y - hy, food.x - hx);
+      if (this._angleOpen(s, foodAngle, headR)) {
+        s.setTargetAngle(foodAngle);
+        s.setBoost(false);
+        return;
+      }
+    }
+
+    // Wander based on movement style
+    this._wanderTimer--;
+    if (this._wanderTimer <= 0) {
+      this._wanderAngle = Math.random() * TAU;
+      this._wanderTimer = 50 + (Math.random() * 100) | 0;
+    }
+    const toCenter = Math.atan2(-hy, -hx);
+    if (this.moveStyle === 'edgeHugger') {
+      const tangent = Math.atan2(-hx, hy);
+      s.setTargetAngle(wrapAngle(tangent * 0.6 + this._wanderAngle * 0.4));
+      s.setBoost(cautious ? false : false);
+    } else if (this.moveStyle === 'roamer') {
+      if (distFromCenter > CONFIG.WORLD_RADIUS * 0.65) {
+        s.setTargetAngle(wrapAngle(this._wanderAngle * 0.4 + toCenter * 0.6));
+      } else {
+        s.setTargetAngle(wrapAngle(this._wanderAngle * 0.7 + s.angle * 0.3));
+      }
       s.setBoost(false);
     } else {
-      // Already near center, patrol in a direction looking for prey.
-      const patrol = s.angle + (Math.random() > 0.5 ? 0.3 : -0.3);
-      s.setTargetAngle(patrol);
+      // wanderer: gentle wide curves
+      s.setTargetAngle(wrapAngle(s.angle + (Math.random() - 0.5) * 0.2));
       s.setBoost(false);
     }
   }
 
-  // Scan ahead for collisions.
+  // Scan ahead for collisions (standard bots).
   _scanAhead(s, headR) {
     const lookDists = [headR * 2 + 18, headR * 2 + 50, headR * 2 + 90];
     for (let i = 0; i < lookDists.length; i++) {

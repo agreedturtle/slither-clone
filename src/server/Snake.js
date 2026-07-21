@@ -17,7 +17,7 @@
 // points needed for queries and rendering.
 // ===========================================================================
 
-import { CONFIG, scoreToPoints, bodyRadiusFromScore } from '../shared/constants.js';
+import { CONFIG, scoreToPoints, bodyRadiusFromScore, turnSpeedForScore } from '../shared/constants.js';
 import { TAU, stepAngle, wrapAngle, dist } from '../shared/math.js';
 
 let _nextId = 1;
@@ -92,11 +92,12 @@ export class Snake {
     if (this.dead) return;
     if (this.invuln > 0) this.invuln--;
 
-    // 1) Steer toward target angle (rate-limited).
+    // 1) Steer toward target angle (rate-limited, scales down with size).
+    const turnSpeed = turnSpeedForScore(this.score);
     if (this.autoSpin) {
-      this.angle = wrapAngle(this.angle + CONFIG.TURN_SPEED);
+      this.angle = wrapAngle(this.angle + turnSpeed);
     } else {
-      this.angle = stepAngle(this.angle, this.targetAngle, CONFIG.TURN_SPEED);
+      this.angle = stepAngle(this.angle, this.targetAngle, turnSpeed);
     }
 
     // 2) Determine speed.
@@ -111,8 +112,10 @@ export class Snake {
     // Push sample onto ring buffer (we keep it a flat array; trim oldest).
     this.samples.push(nx, ny);
     // Grow buffer dynamically if the snake's desired body needs more history.
-    // Each body point needs ~POINT_DIST units of travel = POINT_DIST/speed ticks.
-    const needSamples = Math.ceil(this.points * CONFIG.POINT_DIST / Math.max(1, speed)) * 2 + 16;
+    // Capped to prevent memory explosion at very high scores.
+    const MAX_BODY_CACHE = Math.max(CONFIG.MAX_BODY_POINTS_NET, 40000);
+    const cappedPoints = Math.min(this.points, MAX_BODY_CACHE);
+    const needSamples = Math.ceil(cappedPoints * CONFIG.POINT_DIST / Math.max(1, speed)) * 2 + 16;
     if (needSamples > this.maxSamples) this.maxSamples = needSamples;
     if (this.samples.length > this.maxSamples) {
       this.samples.splice(0, this.samples.length - this.maxSamples);
@@ -188,9 +191,11 @@ export class Snake {
   // Rebuild the visual/collision body points spaced POINT_DIST apart along
   // the path, from head back toward tail. We walk samples newest->oldest and
   // accumulate distance until POINT_DIST, then emit a point.
+  // Capped at MAX_BODY_CACHE to prevent memory explosion at very high scores.
   rebuildBodyIfNeeded() {
     if (!this._bodyDirty && this._bodyX) return;
-    const want = this.points;
+    const MAX_BODY_CACHE = Math.max(CONFIG.MAX_BODY_POINTS_NET, 40000);
+    const want = Math.min(this.points, MAX_BODY_CACHE);
     const samples = this.samples;
     const n = samples.length / 2;
     // Grow body cache arrays if needed.

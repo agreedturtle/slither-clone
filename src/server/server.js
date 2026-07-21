@@ -18,8 +18,9 @@ import { Room } from './Room.js';
 import { Database } from './Database.js';
 import {
   decodeClientMessage, C2S,
-  encodeAuthResult, encodeProfileData,
+  encodeAuthResult, encodeProfileData, encodeShopData, encodeShopResult,
 } from '../shared/protocol.js';
+import { SKIN_PRICES } from '../shared/colors.js';
 
 const __dirname = path.dirname(url.fileURLToPath(import.meta.url));
 const CLIENT_DIR = path.join(__dirname, '..', 'client');
@@ -141,7 +142,10 @@ wss.on('connection', (ws) => {
             } catch (_) {}
             if (result.ok) {
               player.username = result.username;
-              db.getStats(result.username).then(s => { player.stats = s; });
+              db.getStats(result.username).then(s => {
+                player.stats = s;
+                try { ws.send(encodeShopData(s.coins, s.unlockedSkins)); } catch (_) {}
+              });
             }
           });
           break;
@@ -154,7 +158,10 @@ wss.on('connection', (ws) => {
             } catch (_) {}
             if (result.ok) {
               player.username = result.username;
-              db.getStats(result.username).then(s => { player.stats = s; });
+              db.getStats(result.username).then(s => {
+                player.stats = s;
+                try { ws.send(encodeShopData(s.coins, s.unlockedSkins)); } catch (_) {}
+              });
             }
           });
           break;
@@ -163,7 +170,10 @@ wss.on('connection', (ws) => {
           db.validateToken(msg.token).then(username => {
             if (username) {
               player.username = username;
-              db.getStats(username).then(s => { player.stats = s; });
+              db.getStats(username).then(s => {
+                player.stats = s;
+                try { ws.send(encodeShopData(s.coins, s.unlockedSkins)); } catch (_) {}
+              });
               try {
                 const resp = encodeAuthResult(true, '', msg.token, username);
                 ws.send(resp);
@@ -183,6 +193,45 @@ wss.on('connection', (ws) => {
               try { ws.send(encodeProfileData({ username: player.username, ...stats })); } catch (_) {}
             });
           }
+          break;
+        }
+        case C2S.BUY_SKIN: {
+          if (!player.username) {
+            try { ws.send(encodeShopResult(false, 'Login required', 0, '')); } catch (_) {}
+            break;
+          }
+          const skinId = msg.skinId;
+          if (skinId >= SKIN_PRICES.length) {
+            try { ws.send(encodeShopResult(false, 'Invalid skin', 0, '')); } catch (_) {}
+            break;
+          }
+          const price = SKIN_PRICES[skinId];
+          if (price === 0) {
+            try { ws.send(encodeShopResult(false, 'Free skins already owned', 0, '')); } catch (_) {}
+            break;
+          }
+          db.buySkin(player.username, skinId, price).then(result => {
+            if (result.ok) {
+              player.stats.coins = result.coins;
+              player.stats.unlockedSkins = result.unlockedSkins;
+            }
+            try { ws.send(encodeShopResult(result.ok, result.msg || '', result.coins || 0, result.unlockedSkins || '')); } catch (_) {}
+          });
+          break;
+        }
+        case C2S.CLAIM_DAILY: {
+          if (!player.username) {
+            try { ws.send(encodeShopResult(false, 'Login required', 0, '')); } catch (_) {}
+            break;
+          }
+          db.claimDaily(player.username).then(result => {
+            if (result.ok) {
+              player.stats.coins = result.coins;
+              try { ws.send(encodeShopResult(true, 'Daily claimed!', result.coins, player.stats.unlockedSkins)); } catch (_) {}
+            } else {
+              try { ws.send(encodeShopResult(false, result.msg || 'Cannot claim', 0, '')); } catch (_) {}
+            }
+          });
           break;
         }
         default: break;

@@ -15,6 +15,7 @@ import { C2S, S2C, Writer, Reader,
   decodePowerupAdd, decodePowerupRemove, decodeAuthResult, decodeProfileData,
   decodeLeaderboardAlltime,
   encodeLogin, encodeRegister, encodeAuthToken, encodeProfileRequest,
+  encodeBuySkin, encodeClaimDaily,
 } from '../../shared/protocol.js';
 
 export class Net {
@@ -169,6 +170,20 @@ export class Net {
         if (d) this._emit('leaderboardAlltime', d);
         break;
       }
+      case S2C.SHOP_DATA: {
+        const coins = r.u32();
+        const unlockedSkins = r.str();
+        if (unlockedSkins !== undefined) this._emit('shopData', { coins, unlockedSkins });
+        break;
+      }
+      case S2C.SHOP_RESULT: {
+        const ok = r.u8();
+        const msg = r.str();
+        const coins = r.u32();
+        const unlockedSkins = r.str();
+        if (unlockedSkins !== undefined) this._emit('shopResult', { ok: ok === 1, msg, coins, unlockedSkins });
+        break;
+      }
       default: break;
     }
   }
@@ -251,6 +266,14 @@ export class Net {
     const w = new Writer();
     w.op(C2S.LEADERBOARD_ALLTIME);
     this._send(w.toUint8());
+  }
+
+  sendBuySkin(skinId) {
+    this._send(encodeBuySkin(skinId));
+  }
+
+  sendClaimDaily() {
+    this._send(encodeClaimDaily());
   }
 }
 
